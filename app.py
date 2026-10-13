@@ -4,6 +4,7 @@ ffmpeg is bundled via imageio-ffmpeg (pip install imageio-ffmpeg).
 Falls back to any ffmpeg found on PATH.
 """
 import os, re, shutil, tempfile, threading, time, uuid, zipfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, jsonify, request, send_file, send_from_directory
 import yt_dlp
 
@@ -89,19 +90,28 @@ def opts_for(fmt, quality, outtmpl, hook):
         "quiet": True,
         "noprogress": True,
         "ignoreerrors": True,
+        "writethumbnail": True,   # needed by EmbedThumbnail
     }
     if FFMPEG_BIN:
         base["ffmpeg_location"] = FFMPEG_BIN
     if fmt == "mp3":
         base.update(
             format="bestaudio/best",
-            postprocessors=[{"key": "FFmpegExtractAudio", "preferredcodec": "mp3",
-                             "preferredquality": quality or "192"}],
+            postprocessors=[
+                {"key": "FFmpegExtractAudio", "preferredcodec": "mp3",
+                 "preferredquality": quality or "192"},
+                {"key": "FFmpegMetadata", "add_metadata": True},
+                {"key": "EmbedThumbnail"},
+            ],
         )
     elif fmt == "m4a":
         base.update(
             format="bestaudio[ext=m4a]/bestaudio/best",
-            postprocessors=[{"key": "FFmpegExtractAudio", "preferredcodec": "m4a"}],
+            postprocessors=[
+                {"key": "FFmpegExtractAudio", "preferredcodec": "m4a"},
+                {"key": "FFmpegMetadata", "add_metadata": True},
+                {"key": "EmbedThumbnail"},
+            ],
         )
     else:  # mp4 video
         h = quality or "1080"
@@ -109,7 +119,12 @@ def opts_for(fmt, quality, outtmpl, hook):
             format=f"bestvideo[height<={h}]+bestaudio/best[height<={h}]/best",
             merge_output_format="mp4",
         )
+        # No writethumbnail for video — it's already inside the container
+        base["writethumbnail"] = False
     return base
+
+
+PARALLEL_WORKERS = 3   # songs downloaded simultaneously
 
 
 def run_job(job_id, urls, titles, fmt, quality, custom_name=None, serialize=False):
@@ -121,7 +136,6 @@ def run_job(job_id, urls, titles, fmt, quality, custom_name=None, serialize=Fals
     folder = os.path.join(WORK, job_id)
     os.makedirs(folder, exist_ok=True)
     n = len(urls)
-    state = {"i": 0}
 
     # Initialise per-song state
     songs = job.setdefault("songs", {})
@@ -129,59 +143,81 @@ def run_job(job_id, urls, titles, fmt, quality, custom_name=None, serialize=Fals
         vid = u.split("v=")[-1] if "v=" in u else u
         songs[vid] = {"status": "pending", "title": (titles[i] if titles else None) or vid}
 
-    def hook(d):
-        if d["status"] == "downloading":
-            total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
-            if total:
-                job["progress"] = round((state["i"] + d["downloaded_bytes"] / total) / n * 100, 1)
-            job["message"] = f"({state['i'] + 1}/{n}) Downloading {os.path.basename(d.get('filename', ''))}"
-        elif d["status"] == "finished":
-            job["message"] = f"({state['i'] + 1}/{n}) Processing…"
+    # Thread-safe progress: track bytes downloaded per song slot
+    done_count = [0]          # finished songs
+    lock = threading.Lock()
+    folder_lock = threading.Lock()  # serialize listdir snapshots
+
+    def download_one(idx, url):
+        """Download a single URL; updates job state. Returns (vid, success)."""
+        vid = url.split("v=")[-1] if "v=" in url else url
+        songs[vid]["status"] = "downloading"
+
+        def hook(d):
+            if d["status"] == "downloading":
+                total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
+                frac  = (d["downloaded_bytes"] / total) if total else 0
+                with lock:
+                    pct = (done_count[0] + frac) / n * 100
+                    job["progress"] = round(pct, 1)
+                job["message"] = f"Downloading {os.path.basename(d.get('filename', ''))}"
+            elif d["status"] == "finished":
+                job["message"] = f"Processing…"
+
+        with folder_lock:
+            before = set(f for f in os.listdir(folder)
+                         if not f.endswith((".part", ".ytdl", ".webp", ".jpg", ".png", ".zip")))
+
+        o = opts_for(fmt, quality, os.path.join(folder, "%(title)s.%(ext)s"), hook)
+        o["noplaylist"] = True
+        with yt_dlp.YoutubeDL(o) as ydl:
+            ydl.download([url])
+
+        with folder_lock:
+            after = set(f for f in os.listdir(folder)
+                        if not f.endswith((".part", ".ytdl", ".webp", ".jpg", ".png", ".zip")))
+        success = bool(after - before)
+        songs[vid]["status"] = "done" if success else "failed"
+        with lock:
+            done_count[0] += 1
+            job["progress"] = round(done_count[0] / n * 100, 1)
+        return vid, success
 
     try:
-        tmpl = os.path.join(folder, "%(title)s.%(ext)s")
-        for i, u in enumerate(urls):
-            state["i"] = i
-            vid = u.split("v=")[-1] if "v=" in u else u
-            songs[vid]["status"] = "downloading"
-            before = set(f for f in os.listdir(folder)
-                         if not f.endswith((".part", ".ytdl", ".webp", ".jpg", ".zip")))
-            o = opts_for(fmt, quality, tmpl, hook)
-            o["noplaylist"] = True
-            with yt_dlp.YoutubeDL(o) as ydl:
-                ydl.download([u])
-            after = set(f for f in os.listdir(folder)
-                        if not f.endswith((".part", ".ytdl", ".webp", ".jpg", ".zip")))
-            new_files = after - before
-            if new_files:
-                songs[vid]["status"] = "done"
-            else:
-                songs[vid]["status"] = "failed"
+        workers = min(PARALLEL_WORKERS, n)
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futs = {pool.submit(download_one, i, u): u for i, u in enumerate(urls)}
+            for fut in as_completed(futs):
+                try:
+                    fut.result()
+                except Exception as exc:
+                    url = futs[fut]
+                    vid = url.split("v=")[-1] if "v=" in url else url
+                    songs[vid]["status"] = "failed"
+
         files = [f for f in os.listdir(folder)
-                 if not f.endswith((".part", ".ytdl", ".webp", ".jpg", ".zip"))]
+                 if not f.endswith((".part", ".ytdl", ".webp", ".jpg", ".png", ".zip"))]
         if not files:
             raise RuntimeError("Nothing was downloaded. The video may be private or unavailable.")
         if len(files) == 1:
             fpath = os.path.join(folder, files[0])
-            ext = os.path.splitext(files[0])[1]  # e.g. .mp4 or .mp3
+            ext = os.path.splitext(files[0])[1]
             final_name = (safe(custom_name) + ext) if custom_name else files[0]
             job["file"] = fpath
             job["name"] = final_name
         else:
-            zname = safe(custom_name or title or "playlist")
+            zname = safe(custom_name or "playlist")
             zpath = os.path.join(folder, f"{zname}.zip")
             sorted_files = sorted(files)
-            pad = len(str(len(sorted_files)))  # e.g. 2 for ≤99, 3 for ≤999
+            pad = len(str(len(sorted_files)))
             base = safe(custom_name) if custom_name else None
             with zipfile.ZipFile(zpath, "w", zipfile.ZIP_STORED) as z:
                 for idx, f in enumerate(sorted_files, start=1):
                     ext = os.path.splitext(f)[1]
                     orig_stem = os.path.splitext(f)[0]
                     if base and serialize:
-                        # "01 My Playlist.mp3", "02 My Playlist.mp3" …
                         arc_name = f"{str(idx).zfill(pad)} {base}{ext}"
                     elif base:
-                        # "My Playlist - Song Title.mp3"
                         arc_name = f"{base} - {orig_stem}{ext}"
                     else:
                         arc_name = f
@@ -192,7 +228,7 @@ def run_job(job_id, urls, titles, fmt, quality, custom_name=None, serialize=Fals
     except Exception as e:
         job["status"], job["message"] = "error", str(e)[:300]
         job["finished_at"] = time.time()
-        _delete_job_folder(job_id)  # nothing useful to keep on error
+        _delete_job_folder(job_id)
 
 
 @app.get("/")

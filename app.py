@@ -8,6 +8,10 @@ from flask import Flask, jsonify, request, send_file, send_from_directory
 import yt_dlp
 
 app = Flask(__name__, static_folder="static")
+app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("MAX_CONTENT_LENGTH", 2 * 1024 * 1024))
+ALLOW_SAVE_TO = os.environ.get("ALLOW_SAVE_TO", "false").lower() in ("true", "1")
+ADMIN_KEY = os.environ.get("ADMIN_KEY")
+
 WORK = os.path.join(tempfile.gettempdir(), "ytgrab")
 os.makedirs(WORK, exist_ok=True)
 JOBS = {}       # id -> dict(status, progress, message, file, name, songs, finished_at, _stop)
@@ -15,6 +19,18 @@ JOBS_LOCK = threading.Lock()
 
 JOB_TTL    = 30 * 60   # seconds before a finished/errored job is reaped
 REAP_EVERY = 10 * 60   # how often the reaper wakes up
+
+
+# ── Security & Caching headers ──────────────────────────────────────────────
+@app.after_request
+def _apply_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    if request.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "public, max-age=86400"
+    return response
 
 
 # ── Resolve ffmpeg ──────────────────────────────────────────────────────────
@@ -374,6 +390,17 @@ def sitemap():
     return send_from_directory("static", "sitemap.xml", mimetype="application/xml")
 
 
+@app.get("/health")
+@app.get("/api/health")
+def health():
+    return jsonify(
+        status="ok",
+        timestamp=int(time.time()),
+        version=yt_dlp.version.__version__,
+        js_runtimes=list(JS_RUNTIMES.keys())
+    )
+
+
 @app.post("/api/info")
 def info():
     raw_url = (request.json or {}).get("url", "")
@@ -470,6 +497,8 @@ def download():
     # Validate save_to path if provided
     save_to = (d.get("save_to") or "").strip() or None
     if save_to:
+        if not ALLOW_SAVE_TO:
+            return jsonify(error="Server folder saving is disabled in production mode."), 403
         save_to = os.path.expanduser(save_to)
         if not os.path.isabs(save_to):
             return jsonify(error="save_to must be an absolute path."), 400
@@ -512,9 +541,8 @@ def file(job_id):
     if not j or j.get("status") != "done":
         return "Not ready", 404
     resp = send_file(j["file"], as_attachment=True, download_name=j["name"])
-    _delete_job_folder(job_id, delay=3.0)
-    with JOBS_LOCK:
-        JOBS.pop(job_id, None)
+    # Generous delay (10 min) so large files stream fully over slow connections
+    _delete_job_folder(job_id, delay=600.0)
     return resp
 
 
@@ -538,6 +566,8 @@ def ytdlp_version():
 @app.post("/api/ytdlp-update")
 def ytdlp_update():
     """Run yt-dlp --update via subprocess."""
+    if ADMIN_KEY and request.headers.get("X-Admin-Key") != ADMIN_KEY:
+        return jsonify(ok=False, error="Unauthorized: valid X-Admin-Key required"), 401
     try:
         result = subprocess.run(
             [sys.executable, "-m", "yt_dlp", "--update"],
@@ -548,6 +578,24 @@ def ytdlp_update():
         return jsonify(ok=True, output=output[:500], version=new_ver)
     except Exception as e:
         return jsonify(ok=False, error=str(e)[:200]), 500
+
+
+# ── Production Error Handlers ───────────────────────────────────────────────
+@app.errorhandler(404)
+def not_found(e):
+    if request.path.startswith("/api/"):
+        return jsonify(error="Endpoint not found"), 404
+    return send_from_directory("static", "index.html")
+
+
+@app.errorhandler(413)
+def request_entity_too_large(e):
+    return jsonify(error="Request payload too large (max 2MB)"), 413
+
+
+@app.errorhandler(500)
+def server_error(e):
+    return jsonify(error="Internal server error"), 500
 
 
 if __name__ == "__main__":

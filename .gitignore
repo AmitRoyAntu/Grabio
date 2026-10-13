@@ -1,2 +1,9 @@
-.venv
+.venv/
+__pycache__/
+*.pyc
+*.pyo
 .DS_Store
+*.part
+*.ytdl
+cookies.txt
+.env

@@ -1,7 +1,6 @@
-"""Local YouTube downloader web app (Flask + yt-dlp).
+"""Grabio — Universal video & audio downloader web app (Flask + yt-dlp).
 Run:  python app.py   then open http://127.0.0.1:5000
-ffmpeg is bundled via imageio-ffmpeg (pip install imageio-ffmpeg).
-Falls back to any ffmpeg found on PATH.
+ffmpeg is bundled via imageio-ffmpeg or system PATH.
 """
 import os, re, shutil, subprocess, sys, tempfile, threading, time, uuid, zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -76,6 +75,19 @@ def safe(name: str) -> str:
     return re.sub(r'[\\/:*?"<>|]+', "_", name).strip()[:120] or "download"
 
 
+COOKIES_FILE = os.environ.get("COOKIES_FILE") or (
+    "cookies.txt" if os.path.isfile("cookies.txt") else None
+)
+PROXY_URL = os.environ.get("PROXY_URL")
+COMMON_YTDL_OPTS = {
+    "extractor_args": {"youtube": {"player_client": ["web", "android"]}},
+}
+if COOKIES_FILE:
+    COMMON_YTDL_OPTS["cookiefile"] = COOKIES_FILE
+if PROXY_URL:
+    COMMON_YTDL_OPTS["proxy"] = PROXY_URL
+
+
 def opts_for(fmt, quality, outtmpl, hook):
     base = {
         "outtmpl": outtmpl,
@@ -85,6 +97,7 @@ def opts_for(fmt, quality, outtmpl, hook):
         "ignoreerrors": True,
         "writethumbnail": True,   # needed by EmbedThumbnail
     }
+    base.update(COMMON_YTDL_OPTS)
     if FFMPEG_BIN:
         base["ffmpeg_location"] = FFMPEG_BIN
     if fmt == "mp3":
@@ -117,6 +130,9 @@ def opts_for(fmt, quality, outtmpl, hook):
 
 
 PARALLEL_WORKERS = 3
+MAX_CONCURRENT_JOBS = int(os.environ.get("MAX_CONCURRENT_JOBS", 3))
+JOB_SEMAPHORE = threading.Semaphore(MAX_CONCURRENT_JOBS)
+MAX_PLAYLIST_ITEMS = int(os.environ.get("MAX_PLAYLIST_ITEMS", 25))
 
 
 def _item_id(url: str, entry_id: str | None = None) -> str:
@@ -141,19 +157,21 @@ def run_job(job_id, urls, titles, fmt, quality,
     job  = JOBS[job_id]
     stop: threading.Event = job["_stop"]
 
-    folder = os.path.join(WORK, job_id)
-    os.makedirs(folder, exist_ok=True)
-    n = len(urls)
+    job["message"] = "Queued…" if JOB_SEMAPHORE._value == 0 else "Starting…"
+    with JOB_SEMAPHORE:
+        folder = os.path.join(WORK, job_id)
+        os.makedirs(folder, exist_ok=True)
+        n = len(urls)
 
-    songs = job.setdefault("songs", {})
-    for i, u in enumerate(urls):
-        eid = entry_ids[i] if (entry_ids and i < len(entry_ids)) else None
-        vid = _item_id(u, eid)
-        songs[vid] = {"status": "pending", "title": (titles[i] if titles else None) or vid}
+        songs = job.setdefault("songs", {})
+        for i, u in enumerate(urls):
+            eid = entry_ids[i] if (entry_ids and i < len(entry_ids)) else None
+            vid = _item_id(u, eid)
+            songs[vid] = {"status": "pending", "title": (titles[i] if titles else None) or vid}
 
-    done_count = [0]
-    lock        = threading.Lock()
-    folder_lock = threading.Lock()
+        done_count = [0]
+        lock        = threading.Lock()
+        folder_lock = threading.Lock()
 
     def download_one(idx, url):
         eid = entry_ids[idx] if (entry_ids and idx < len(entry_ids)) else None
@@ -286,14 +304,29 @@ def index():
     return send_from_directory("static", "index.html")
 
 
+@app.get("/robots.txt")
+def robots():
+    return send_from_directory("static", "robots.txt")
+
+
+@app.get("/sitemap.xml")
+def sitemap():
+    return send_from_directory("static", "sitemap.xml", mimetype="application/xml")
+
+
 @app.post("/api/info")
 def info():
     url = (request.json or {}).get("url", "").strip()
     if not url:
         return jsonify(error="Paste a link first."), 400
     try:
-        with yt_dlp.YoutubeDL({"quiet": True, "extract_flat": "in_playlist",
-                               "skip_download": True}) as ydl:
+        ydl_opts = {
+            "quiet": True,
+            "extract_flat": "in_playlist",
+            "skip_download": True
+        }
+        ydl_opts.update(COMMON_YTDL_OPTS)
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             i = ydl.extract_info(url, download=False)
         entries = i.get("entries")
         items = None
@@ -352,6 +385,9 @@ def download():
             video_urls = [d.get("url", "")]
             if not entry_ids and d.get("url"):
                 entry_ids = [_item_id(d.get("url", ""))]
+
+    if len(video_urls) > MAX_PLAYLIST_ITEMS:
+        return jsonify(error=f"Maximum {MAX_PLAYLIST_ITEMS} items per batch allowed on public server."), 400
 
     while len(song_titles) < len(video_urls):
         song_titles.append(None)
@@ -440,15 +476,17 @@ def ytdlp_update():
 
 
 if __name__ == "__main__":
-    HOST, PORT = "127.0.0.1", 5000
+    HOST = os.environ.get("HOST", "0.0.0.0" if os.environ.get("PORT") else "127.0.0.1")
+    PORT = int(os.environ.get("PORT", 5000))
     if FFMPEG_BIN:
         print(f"ffmpeg : {FFMPEG_BIN}")
     else:
         print("WARNING: ffmpeg not found. Install imageio-ffmpeg or add ffmpeg to PATH.")
     try:
         from waitress import serve
-        print(f"Serving on http://{HOST}:{PORT}  (waitress)")
-        serve(app, host=HOST, port=PORT, threads=8)
+        threads = int(os.environ.get("THREADS", 16))
+        print(f"Serving on http://{HOST}:{PORT}  (waitress, {threads} threads)")
+        serve(app, host=HOST, port=PORT, threads=threads)
     except ImportError:
         print(f"waitress not installed — using Flask dev server on http://{HOST}:{PORT}")
         print("  Run:  pip install waitress   for a production-grade server.")

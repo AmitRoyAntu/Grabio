@@ -79,6 +79,41 @@ Then open **http://127.0.0.1:5000** in your web browser.
 
 ---
 
+## ☁️ Deploy to the Cloud (Public Web App)
+
+You can host Grabio online on a free or low-cost cloud provider so anyone can access it from a public URL.
+
+### Option A: Deploy on [Render.com](https://render.com) (Recommended Free Tier)
+1. Push this repository to your GitHub account.
+2. Sign in to **[dashboard.render.com](https://dashboard.render.com)**.
+3. Click **New +** → **Web Service**.
+4. Connect your GitHub repository.
+5. Select **Docker** as the Runtime (or select Blueprint to use `render.yaml`).
+6. Set the Instance Type to **Free** and click **Deploy Web Service**.
+7. Render will build the Docker container and give you a public URL (e.g. `https://grabio.onrender.com`).
+
+### Option B: Deploy on [Railway](https://railway.app)
+1. In Railway, click **New Project** → **Deploy from GitHub repo**.
+2. Railway will automatically detect the `Dockerfile`, build it, and assign a public domain.
+
+### Option C: Run with Docker Anywhere (VPS / Server)
+```bash
+# Build the Docker image
+docker build -t grabio .
+
+# Run container mapping port 5000
+docker run -d -p 5000:5000 --name grabio grabio
+```
+
+### ⚙️ Optional Cloud Environment Variables
+| Variable | Description |
+|---|---|
+| `PORT` | Port number to bind (automatically provided by Render/Railway, defaults to `5000`). |
+| `COOKIES_FILE` | Path to a Netscape-format `cookies.txt` file to allow access to age-restricted content or bypass platform bot challenges. |
+| `PROXY_URL` | Optional HTTP/SOCKS5 proxy URL (e.g. `http://user:pass@proxy:port`) to route download traffic through residential proxies. |
+
+---
+
 ## 📦 Dependencies
 
 | Package | Purpose |

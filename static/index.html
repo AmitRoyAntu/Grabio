@@ -108,6 +108,33 @@
   #list input:checked{background-color:var(--accent);border-color:var(--accent);
         background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5.5 10.5l3 3 6-7' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
 
+  .fname-row{margin-top:22px}
+  .fname-row .cap{font-size:.875rem;font-weight:500;color:var(--muted);padding-left:4px;display:block;margin-bottom:8px}
+  .fname-wrap{display:flex;align-items:center;background:var(--soft);border:1px solid var(--line);border-radius:999px;
+        padding:4px 4px 4px 18px;gap:6px;transition:border-color .2s,box-shadow .2s}
+  .fname-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 4px var(--ring)}
+  .fname-wrap input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);
+        font:500 .95rem var(--body);outline:none;padding:8px 0}
+  .fname-wrap input::placeholder{color:var(--muted);opacity:.7}
+  .fname-ext{color:var(--muted);font:500 .9rem var(--body);white-space:nowrap;padding-right:14px;user-select:none}
+
+  /* serialize toggle */
+  .serialize-row{display:none;align-items:center;justify-content:space-between;
+        margin-top:14px;padding:14px 18px;background:var(--soft);border:1px solid var(--line);
+        border-radius:999px;gap:12px}
+  .serialize-row.pl-only{display:flex}
+  .serialize-row .slabel{font:500 .9rem var(--body);color:var(--ink);flex:1}
+  .serialize-row .slabel small{display:block;font-weight:400;color:var(--muted);font-size:.82rem;margin-top:2px}
+  .toggle{position:relative;flex:none;width:42px;height:24px;cursor:pointer}
+  .toggle input{opacity:0;width:0;height:0;position:absolute}
+  .toggle-track{display:block;width:42px;height:24px;border-radius:999px;background:var(--line);
+        transition:background .2s}
+  .toggle input:checked~.toggle-track{background:var(--accent)}
+  .toggle-knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;
+        background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s cubic-bezier(.3,.9,.3,1)}
+  .toggle input:checked~.toggle-knob{transform:translateX(18px)}
+  .toggle input:focus-visible~.toggle-track{outline:3px solid var(--accent);outline-offset:2px}
+
   .opts{display:flex;flex-wrap:wrap;gap:18px;margin-top:24px}
   .opts .grp{display:flex;flex-direction:column;gap:8px}
   .opts .cap{font-size:.875rem;font-weight:500;color:var(--muted);padding-left:4px}
@@ -140,6 +167,7 @@
     .seg{grid-template-columns:repeat(3,1fr)}
     .seg label{padding:9px 6px}
     select{width:100%}
+    .fname-wrap{border-radius:18px}
   }
   @media (prefers-reduced-motion:reduce){
     *{animation:none!important;transition:none!important}
@@ -200,6 +228,26 @@
         </div>
       </div>
 
+      <div class="fname-row">
+        <label class="cap" for="fname">File name</label>
+        <div class="fname-wrap">
+          <input id="fname" type="text" placeholder="Enter file name" autocomplete="off" spellcheck="false">
+          <span class="fname-ext" id="fname-ext">.mp4</span>
+        </div>
+      </div>
+
+      <div class="serialize-row" id="serialize-row">
+        <span class="slabel">
+          Serialize filenames
+          <small>Renames each track: Name 01, Name 02, Name 03…</small>
+        </span>
+        <label class="toggle" aria-label="Serialize filenames">
+          <input type="checkbox" id="serialize">
+          <span class="toggle-track"></span>
+          <span class="toggle-knob"></span>
+        </label>
+      </div>
+
       <button id="go" class="btn go" type="button"><i class="fill" id="fill"></i><span class="lbl" id="golabel">Download</span></button>
       <div id="msg" class="note" role="status" style="text-align:center"></div>
     </section>
@@ -237,10 +285,15 @@ function fillQ(){
   if(f==='mp4') $('q').value="1080"; if(f==='mp3') $('q').value="192";
   moveThumb();
 }
-document.querySelectorAll('input[name=fmt]').forEach(r=>r.onchange=fillQ);
+document.querySelectorAll('input[name=fmt]').forEach(r=>r.onchange=()=>{fillQ();updateExt();});
 window.addEventListener('resize',moveThumb);
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(moveThumb);
-fillQ();
+const EXT={mp4:'.mp4',mp3:'.mp3',m4a:'.m4a'};
+function updateExt(){
+  const f=document.querySelector('input[name=fmt]:checked').value;
+  $('fname-ext').textContent=EXT[f]||'.mp4';
+}
+fillQ(); updateExt();
 
 /* helpers */
 function say(id,t,err){ const n=$(id); n.textContent=t; n.className='note'+(err?' err':''); }
@@ -270,6 +323,11 @@ $('check').onclick=async()=>{
     $('meta').textContent=(d.channel?d.channel+' · ':'')+(d.is_playlist?d.count+' videos':'Single video');
     if(d.thumbnail) $('thumb').src=d.thumbnail; else $('thumb').removeAttribute('src');
     isPlaylist=d.is_playlist; plTitle=d.title||'playlist';
+    // Pre-fill filename from title (strip chars invalid in filenames)
+    $('fname').value=(d.title||'download').replace(/[\\/:*?"<>|]+/g,'_').trim().slice(0,120);
+    // Show serialize toggle only for playlists
+    $('serialize-row').classList.toggle('pl-only', d.is_playlist);
+    if(!d.is_playlist) $('serialize').checked=false;
     $('songs').style.display=d.is_playlist?'block':'none';
     $('list').innerHTML=(d.entries||[]).map(e=>
       `<li><label><input type="checkbox" value="${esc(e.id)}" checked><span class="t" title="${esc(e.title)}">${esc(e.title)}</span><span class="d">${fmtDur(e.duration)}</span></label></li>`).join('');
@@ -284,8 +342,12 @@ $('check').onclick=async()=>{
 /* download */
 $('go').onclick=async()=>{
   busy=true; $('golabel').textContent='Starting…'; refresh(); $('fill').style.width='0'; say('msg','');
-  const body={url:$('url').value.trim(),format:document.querySelector('input[name=fmt]:checked').value,
+  const fmt=document.querySelector('input[name=fmt]:checked').value;
+  const customName=($('fname').value||'').trim().replace(/[\\/:*?"<>|]+/g,'_').slice(0,120)||'download';
+  const body={url:$('url').value.trim(),format:fmt,
               quality:$('q').value,title:plTitle,
+              custom_name:customName,
+              serialize: isPlaylist && $('serialize').checked,
               ids:isPlaylist?boxes().filter(b=>b.checked).map(b=>b.value):null};
   const finish=()=>{ busy=false; $('fill').style.width='0'; refresh(); };
   try{

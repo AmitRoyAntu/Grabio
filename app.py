@@ -44,7 +44,7 @@ def opts_for(fmt, quality, outtmpl, hook):
     return base
 
 
-def run_job(job_id, urls, title, fmt, quality):
+def run_job(job_id, urls, title, fmt, quality, custom_name=None, serialize=False):
     job = JOBS[job_id]
     folder = os.path.join(WORK, job_id)
     os.makedirs(folder, exist_ok=True)
@@ -73,14 +73,30 @@ def run_job(job_id, urls, title, fmt, quality):
         if not files:
             raise RuntimeError("Nothing was downloaded. The video may be private or unavailable.")
         if len(files) == 1:
-            job["file"] = os.path.join(folder, files[0])
-            job["name"] = files[0]
+            fpath = os.path.join(folder, files[0])
+            ext = os.path.splitext(files[0])[1]  # e.g. .mp4 or .mp3
+            final_name = (safe(custom_name) + ext) if custom_name else files[0]
+            job["file"] = fpath
+            job["name"] = final_name
         else:
-            zname = safe(title or "playlist")
+            zname = safe(custom_name or title or "playlist")
             zpath = os.path.join(folder, f"{zname}.zip")
+            sorted_files = sorted(files)
+            pad = len(str(len(sorted_files)))  # e.g. 2 for ≤99, 3 for ≤999
+            base = safe(custom_name) if custom_name else None
             with zipfile.ZipFile(zpath, "w", zipfile.ZIP_STORED) as z:
-                for f in sorted(files):
-                    z.write(os.path.join(folder, f), f)
+                for idx, f in enumerate(sorted_files, start=1):
+                    ext = os.path.splitext(f)[1]
+                    orig_stem = os.path.splitext(f)[0]
+                    if base and serialize:
+                        # "01 My Playlist.mp3", "02 My Playlist.mp3" …
+                        arc_name = f"{str(idx).zfill(pad)} {base}{ext}"
+                    elif base:
+                        # "My Playlist - Song Title.mp3"
+                        arc_name = f"{base} - {orig_stem}{ext}"
+                    else:
+                        arc_name = f
+                    z.write(os.path.join(folder, f), arc_name)
             job["file"], job["name"] = zpath, f"{zname}.zip"
         job["status"], job["progress"], job["message"] = "done", 100, "Ready"
     except Exception as e:
@@ -129,7 +145,8 @@ def download():
     ids = [i for i in (d.get("ids") or []) if re.fullmatch(r"[\w-]{6,20}", str(i))]
     urls = [f"https://www.youtube.com/watch?v={i}" for i in ids] or [d.get("url", "")]
     threading.Thread(target=run_job, daemon=True, args=(
-        job_id, urls, d.get("title"), d.get("format", "mp4"), d.get("quality"))).start()
+        job_id, urls, d.get("title"), d.get("format", "mp4"), d.get("quality"),
+        d.get("custom_name") or None), kwargs={"serialize": bool(d.get("serialize"))}).start()
     return jsonify(id=job_id)
 
 

@@ -3,14 +3,18 @@ Run:  python app.py   then open http://127.0.0.1:5000
 ffmpeg is bundled via imageio-ffmpeg (pip install imageio-ffmpeg).
 Falls back to any ffmpeg found on PATH.
 """
-import os, re, shutil, tempfile, threading, uuid, zipfile
+import os, re, shutil, tempfile, threading, time, uuid, zipfile
 from flask import Flask, jsonify, request, send_file, send_from_directory
 import yt_dlp
 
 app = Flask(__name__, static_folder="static")
 WORK = os.path.join(tempfile.gettempdir(), "ytgrab")
 os.makedirs(WORK, exist_ok=True)
-JOBS = {}  # id -> dict(status, progress, message, file, name, songs)
+JOBS = {}  # id -> dict(status, progress, message, file, name, songs, finished_at)
+JOBS_LOCK = threading.Lock()
+
+JOB_TTL   = 30 * 60   # seconds before a finished/errored job is reaped
+REAP_EVERY = 10 * 60  # how often the reaper wakes up
 
 # ── Resolve ffmpeg ─────────────────────────────────────────────────────────
 # Prefer the static binary bundled with imageio-ffmpeg so users don't need
@@ -26,6 +30,52 @@ def _resolve_ffmpeg() -> str | None:
     return shutil.which("ffmpeg")
 
 FFMPEG_BIN = _resolve_ffmpeg()
+
+
+# ── Cleanup helpers ────────────────────────────────────────────────────────
+def _delete_job_folder(job_id: str, delay: float = 0.0) -> None:
+    """Delete the temp folder for a job, optionally after a short delay."""
+    def _do():
+        if delay:
+            time.sleep(delay)
+        folder = os.path.join(WORK, job_id)
+        try:
+            shutil.rmtree(folder, ignore_errors=True)
+        except Exception:
+            pass
+    threading.Thread(target=_do, daemon=True).start()
+
+
+def _reaper() -> None:
+    """Background thread: every REAP_EVERY seconds, remove old jobs."""
+    while True:
+        time.sleep(REAP_EVERY)
+        now = time.time()
+        with JOBS_LOCK:
+            stale = [
+                jid for jid, j in list(JOBS.items())
+                if j.get("status") in ("done", "error")
+                and now - j.get("finished_at", now) > JOB_TTL
+            ]
+        for jid in stale:
+            _delete_job_folder(jid)
+            with JOBS_LOCK:
+                JOBS.pop(jid, None)
+
+
+def _startup_cleanup() -> None:
+    """Wipe any temp folders left over from a previous server run."""
+    try:
+        for name in os.listdir(WORK):
+            folder = os.path.join(WORK, name)
+            if os.path.isdir(folder):
+                shutil.rmtree(folder, ignore_errors=True)
+    except Exception:
+        pass
+
+
+_startup_cleanup()
+threading.Thread(target=_reaper, daemon=True, name="ytgrab-reaper").start()
 
 
 def safe(name):
@@ -138,8 +188,11 @@ def run_job(job_id, urls, titles, fmt, quality, custom_name=None, serialize=Fals
                     z.write(os.path.join(folder, f), arc_name)
             job["file"], job["name"] = zpath, f"{zname}.zip"
         job["status"], job["progress"], job["message"] = "done", 100, "Ready"
+        job["finished_at"] = time.time()
     except Exception as e:
         job["status"], job["message"] = "error", str(e)[:300]
+        job["finished_at"] = time.time()
+        _delete_job_folder(job_id)  # nothing useful to keep on error
 
 
 @app.get("/")
@@ -212,7 +265,13 @@ def file(job_id):
     j = JOBS.get(job_id)
     if not j or j.get("status") != "done":
         return "Not ready", 404
-    return send_file(j["file"], as_attachment=True, download_name=j["name"])
+    resp = send_file(j["file"], as_attachment=True, download_name=j["name"])
+    # Delete the temp folder a couple of seconds after the response is sent
+    # so Flask finishes streaming before we remove the file.
+    _delete_job_folder(job_id, delay=3.0)
+    with JOBS_LOCK:
+        JOBS.pop(job_id, None)
+    return resp
 
 
 if __name__ == "__main__":

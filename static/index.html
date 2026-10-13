@@ -107,6 +107,25 @@
         border:1.5px solid var(--muted);background:transparent center/14px no-repeat;cursor:pointer;transition:background-color .15s,border-color .15s}
   #list input:checked{background-color:var(--accent);border-color:var(--accent);
         background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5.5 10.5l3 3 6-7' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+  /* per-song status icons */
+  .sico{width:18px;height:18px;flex:none;display:grid;place-items:center;font-size:.8rem;border-radius:50%}
+  .sico.done{color:#22c55e}
+  .sico.failed{color:var(--err)}
+  .sico.downloading{color:var(--accent)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .sico.downloading svg{animation:spin .9s linear infinite}
+  /* filter */
+  .filter-wrap{position:relative;margin-bottom:10px}
+  .filter-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--muted);pointer-events:none}
+  #filter{width:100%;border:1px solid var(--line);border-radius:999px;background:var(--surface);
+        color:var(--ink);font:inherit;font-size:.9rem;padding:8px 12px 8px 34px;outline:none;
+        transition:border-color .2s,box-shadow .2s}
+  #filter:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+  #filter::placeholder{color:var(--muted);opacity:.7}
+  /* drop zone */
+  body.drag-over .finder{border-color:var(--accent);box-shadow:0 0 0 4px var(--ring),var(--shadow);}
+  /* quality size hint */
+  .size-hint{color:var(--muted);font-size:.8rem;padding-left:6px;font-variant-numeric:tabular-nums}
 
   .fname-row{margin-top:22px}
   .fname-row .cap{font-size:.875rem;font-weight:500;color:var(--muted);padding-left:4px;display:block;margin-bottom:8px}
@@ -119,19 +138,23 @@
   .fname-ext{color:var(--muted);font:500 .9rem var(--body);white-space:nowrap;padding-right:14px;user-select:none}
 
   /* serialize toggle */
-  .serialize-row{display:none;align-items:center;justify-content:space-between;
-        margin-top:14px;padding:14px 18px;background:var(--soft);border:1px solid var(--line);
-        border-radius:999px;gap:12px}
+  .serialize-row{display:none;align-items:center;gap:14px;
+        margin-top:10px;padding:14px 16px;background:var(--soft);border:1px solid var(--line);
+        border-radius:18px}
   .serialize-row.pl-only{display:flex}
-  .serialize-row .slabel{font:500 .9rem var(--body);color:var(--ink);flex:1}
-  .serialize-row .slabel small{display:block;font-weight:400;color:var(--muted);font-size:.82rem;margin-top:2px}
-  .toggle{position:relative;flex:none;width:42px;height:24px;cursor:pointer}
+  .serialize-icon{width:36px;height:36px;border-radius:10px;background:var(--surface);
+        border:1px solid var(--line);display:grid;place-items:center;flex:none;color:var(--accent)}
+  .serialize-icon svg{width:16px;height:16px}
+  .serialize-row .slabel{flex:1;min-width:0}
+  .serialize-row .slabel strong{display:block;font:600 .9rem var(--body);color:var(--ink)}
+  .serialize-row .slabel small{display:block;font-weight:400;color:var(--muted);font-size:.8rem;margin-top:1px}
+  .toggle{position:relative;flex:none;width:44px;height:26px;cursor:pointer}
   .toggle input{opacity:0;width:0;height:0;position:absolute}
-  .toggle-track{display:block;width:42px;height:24px;border-radius:999px;background:var(--line);
-        transition:background .2s}
-  .toggle input:checked~.toggle-track{background:var(--accent)}
-  .toggle-knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;
-        background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s cubic-bezier(.3,.9,.3,1)}
+  .toggle-track{display:block;width:44px;height:26px;border-radius:999px;background:var(--line);
+        border:1px solid rgba(0,0,0,.06);transition:background .2s,border-color .2s}
+  .toggle input:checked~.toggle-track{background:var(--accent);border-color:transparent}
+  .toggle-knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+        background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.22);transition:transform .2s cubic-bezier(.3,.9,.3,1)}
   .toggle input:checked~.toggle-knob{transform:translateX(18px)}
   .toggle input:focus-visible~.toggle-track{outline:3px solid var(--accent);outline-offset:2px}
 
@@ -205,6 +228,10 @@
 
       <details id="songs" open>
         <summary><span>Songs</span><span id="selcount"></span></summary>
+        <div class="filter-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input id="filter" type="search" placeholder="Filter songs…" autocomplete="off">
+        </div>
         <div class="tools">
           <button type="button" class="chip" id="selall">Select all</button>
           <button type="button" class="chip" id="selnone">Select none</button>
@@ -224,7 +251,10 @@
         </div>
         <div class="grp">
           <label class="cap" for="q">Quality</label>
-          <select id="q"></select>
+          <div style="display:flex;align-items:center;gap:6px">
+            <select id="q"></select>
+            <span class="size-hint" id="size-hint"></span>
+          </div>
         </div>
       </div>
 
@@ -237,11 +267,17 @@
       </div>
 
       <div class="serialize-row" id="serialize-row">
-        <span class="slabel">
-          Serialize filenames
-          <small>Renames each track: Name 01, Name 02, Name 03…</small>
+        <span class="serialize-icon" aria-hidden="true">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 4h2M3 8h2M3 12h2"/>
+            <path d="M7 4h6M7 8h6M7 12h6"/>
+          </svg>
         </span>
-        <label class="toggle" aria-label="Serialize filenames">
+        <span class="slabel">
+          <strong>Serialize filenames</strong>
+          <small>Prefix each file: 01 Name, 02 Name, 03 Name…</small>
+        </span>
+        <label class="toggle" aria-label="Toggle serialize filenames">
           <input type="checkbox" id="serialize">
           <span class="toggle-track"></span>
           <span class="toggle-knob"></span>
@@ -269,6 +305,28 @@ $('theme').onclick=()=>{
 };
 paintTheme();
 
+/* drag-and-drop */
+document.addEventListener('dragover', e=>{ e.preventDefault(); document.body.classList.add('drag-over'); });
+document.addEventListener('dragleave', e=>{ if(!e.relatedTarget) document.body.classList.remove('drag-over'); });
+document.addEventListener('drop', e=>{
+  e.preventDefault(); document.body.classList.remove('drag-over');
+  const text = e.dataTransfer.getData('text');
+  if(text && text.includes('youtube.com') || text && text.includes('youtu.be')){
+    $('url').value=text; $('check').click();
+  }
+});
+
+/* clipboard auto-detect on focus */
+document.addEventListener('visibilitychange', async()=>{
+  if(document.visibilityState!=='visible') return;
+  try{
+    const t=await navigator.clipboard.readText();
+    if((t.includes('youtube.com')||t.includes('youtu.be')) && t.trim()!==$('url').value.trim()){
+      $('url').value=t.trim(); say('cmsg','YouTube link detected from clipboard — press Check link',false);
+    }
+  }catch(e){/* clipboard permission denied, ignore */}
+});
+
 /* format + quality */
 const Q = {
   mp4:[["2160","Up to 4K"],["1440","Up to 1440p"],["1080","Up to 1080p"],["720","Up to 720p"],["480","Up to 480p"],["360","Up to 360p"]],
@@ -285,32 +343,77 @@ function fillQ(){
   if(f==='mp4') $('q').value="1080"; if(f==='mp3') $('q').value="192";
   moveThumb();
 }
-document.querySelectorAll('input[name=fmt]').forEach(r=>r.onchange=()=>{fillQ();updateExt();});
+document.querySelectorAll('input[name=fmt]').forEach(r=>r.onchange=()=>{fillQ();updateExt();updateSizeHint();});
 window.addEventListener('resize',moveThumb);
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(moveThumb);
 const EXT={mp4:'.mp4',mp3:'.mp3',m4a:'.m4a'};
+/* bitrate kbps estimates per format/quality for size hint */
+const KBPS={
+  mp4:{'2160':25000,'1440':10000,'1080':5000,'720':2500,'480':1000,'360':500},
+  mp3:{'320':320,'192':192,'128':128},
+  m4a:{'best':192}
+};
+let totalDuration=0;
+function fmtSize(bytes){
+  if(!bytes) return '';
+  if(bytes<1024*1024) return (bytes/1024).toFixed(0)+'KB';
+  return (bytes/(1024*1024)).toFixed(1)+'MB';
+}
+function updateSizeHint(){
+  const fmt=document.querySelector('input[name=fmt]:checked').value;
+  const q=$('q').value;
+  const kbps=(KBPS[fmt]||{})[q];
+  const hint=$('size-hint'); if(!hint) return;
+  if(!kbps||!totalDuration){ hint.textContent=''; return; }
+  const bytes=kbps*1000/8*totalDuration;
+  hint.textContent='~'+fmtSize(bytes);
+}
 function updateExt(){
   const f=document.querySelector('input[name=fmt]:checked').value;
   $('fname-ext').textContent=EXT[f]||'.mp4';
 }
-fillQ(); updateExt();
+$('q').addEventListener('change', updateSizeHint);
+fillQ(); updateExt(); updateSizeHint();
 
 /* helpers */
 function say(id,t,err){ const n=$(id); n.textContent=t; n.className='note'+(err?' err':''); }
 let isPlaylist=false, busy=false, plTitle='';
 const fmtDur=s=>{ if(!s) return ''; s=Math.round(s); const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;
   return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0'); };
-const boxes=()=>[...document.querySelectorAll('#list input')];
+const boxes=()=>[...document.querySelectorAll('#list li:not([hidden]) input')];
+const allBoxes=()=>[...document.querySelectorAll('#list input')];
 function esc(t){ const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
 function refresh(){
   const all=boxes(), n=all.filter(b=>b.checked).length;
-  $('selcount').textContent=`${n} of ${all.length} selected`;
+  $('selcount').textContent=`${n} of ${allBoxes().length} selected`;
   if(!busy) $('golabel').textContent=isPlaylist?`Download ${n} selected`:'Download';
   $('go').disabled=busy||(isPlaylist&&n===0);
 }
 $('selall').onclick=()=>{ boxes().forEach(b=>b.checked=true); refresh(); };
 $('selnone').onclick=()=>{ boxes().forEach(b=>b.checked=false); refresh(); };
 $('list').addEventListener('change',refresh);
+
+/* filter */
+$('filter').addEventListener('input',()=>{
+  const q=$('filter').value.toLowerCase();
+  document.querySelectorAll('#list li').forEach(li=>{
+    li.hidden = q && !li.querySelector('.t').textContent.toLowerCase().includes(q);
+  });
+  refresh();
+});
+
+/* shift-click range selection */
+let lastChecked=null;
+$('list').addEventListener('click', e=>{
+  const cb=e.target.closest('input[type=checkbox]'); if(!cb) return;
+  if(e.shiftKey && lastChecked && lastChecked!==cb){
+    const all=allBoxes();
+    const i1=all.indexOf(lastChecked), i2=all.indexOf(cb);
+    const [lo,hi]=[Math.min(i1,i2),Math.max(i1,i2)];
+    all.slice(lo,hi+1).forEach(b=>b.checked=cb.checked);
+  }
+  lastChecked=cb; refresh();
+});
 
 /* check link */
 $('check').onclick=async()=>{
@@ -323,14 +426,20 @@ $('check').onclick=async()=>{
     $('meta').textContent=(d.channel?d.channel+' · ':'')+(d.is_playlist?d.count+' videos':'Single video');
     if(d.thumbnail) $('thumb').src=d.thumbnail; else $('thumb').removeAttribute('src');
     isPlaylist=d.is_playlist; plTitle=d.title||'playlist';
+    // Track total duration for size estimate
+    totalDuration = d.is_playlist
+      ? (d.entries||[]).reduce((s,e)=>s+(e.duration||0),0)
+      : (d.duration||0);
+    updateSizeHint();
     // Pre-fill filename from title (strip chars invalid in filenames)
     $('fname').value=(d.title||'download').replace(/[\\/:*?"<>|]+/g,'_').trim().slice(0,120);
     // Show serialize toggle only for playlists
     $('serialize-row').classList.toggle('pl-only', d.is_playlist);
     if(!d.is_playlist) $('serialize').checked=false;
+    $('filter').value=''; // reset filter
     $('songs').style.display=d.is_playlist?'block':'none';
     $('list').innerHTML=(d.entries||[]).map(e=>
-      `<li><label><input type="checkbox" value="${esc(e.id)}" checked><span class="t" title="${esc(e.title)}">${esc(e.title)}</span><span class="d">${fmtDur(e.duration)}</span></label></li>`).join('');
+      `<li data-id="${esc(e.id)}"><label><input type="checkbox" value="${esc(e.id)}" checked><span class="t" title="${esc(e.title)}">${esc(e.title)}</span><span class="d">${fmtDur(e.duration)}</span><span class="sico" id="si-${esc(e.id)}"></span></label></li>`).join('');
     say('cmsg',''); say('msg','');
     $('fill').style.width='0';
     const res=$('result'); res.classList.remove('show'); void res.offsetWidth; res.classList.add('show');
@@ -342,13 +451,17 @@ $('check').onclick=async()=>{
 /* download */
 $('go').onclick=async()=>{
   busy=true; $('golabel').textContent='Starting…'; refresh(); $('fill').style.width='0'; say('msg','');
+  const selectedBoxes = boxes().filter(b=>b.checked);
+  const selectedIds = selectedBoxes.map(b=>b.value);
+  const selectedTitles = selectedBoxes.map(b=>b.closest('li').querySelector('.t').textContent);
   const fmt=document.querySelector('input[name=fmt]:checked').value;
   const customName=($('fname').value||'').trim().replace(/[\\/:*?"<>|]+/g,'_').slice(0,120)||'download';
   const body={url:$('url').value.trim(),format:fmt,
               quality:$('q').value,title:plTitle,
               custom_name:customName,
               serialize: isPlaylist && $('serialize').checked,
-              ids:isPlaylist?boxes().filter(b=>b.checked).map(b=>b.value):null};
+              ids:isPlaylist?selectedIds:null,
+              titles:isPlaylist?selectedTitles:null};
   const finish=()=>{ busy=false; $('fill').style.width='0'; refresh(); };
   try{
     const r=await fetch('/api/download',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -357,8 +470,42 @@ $('go').onclick=async()=>{
       const s=await (await fetch('/api/status/'+id)).json();
       const p=Math.round(s.progress||0);
       $('fill').style.width=p+'%'; $('golabel').textContent=`Downloading ${p}%`; say('msg',s.message||'');
-      if(s.status==='done'){ clearInterval(t); $('golabel').textContent='Saved'; say('msg',s.name);
-        location.href='/api/file/'+id; setTimeout(finish,2500); }
+      // Update per-song status icons
+      if(s.songs){
+        Object.entries(s.songs).forEach(([vid,info])=>{
+          const el=document.getElementById('si-'+vid); if(!el) return;
+          if(info.status==='downloading'){
+            el.className='sico downloading';
+            el.innerHTML=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 0 20"/></svg>`;
+          } else if(info.status==='done'){
+            el.className='sico done';
+            el.innerHTML=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>`;
+          } else if(info.status==='failed'){
+            el.className='sico failed';
+            el.innerHTML=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
+          }
+        });
+      }
+      if(s.status==='done'){
+        clearInterval(t); $('golabel').textContent='Saved'; say('msg',s.name);
+        // Show retry button if any songs failed
+        const failed=s.songs?Object.entries(s.songs).filter(([,v])=>v.status==='failed'):[];
+        if(failed.length>0){
+          const rb=document.createElement('button');
+          rb.className='chip'; rb.style.marginTop='10px';
+          rb.textContent=`Retry ${failed.length} failed song${failed.length>1?'s':''}`;
+          rb.onclick=()=>{
+            // Re-check failed ones in the list
+            allBoxes().forEach(b=>{
+              const vid=b.value;
+              b.checked = failed.some(([fid])=>fid===vid);
+            });
+            rb.remove(); refresh(); $('go').click();
+          };
+          $('msg').after(rb);
+        }
+        location.href='/api/file/'+id; setTimeout(finish,2500);
+      }
       if(s.status==='error'){ clearInterval(t); say('msg',s.message,true); finish(); }
     },800);
   }catch(e){ say('msg','Download failed to start.',true); finish(); }

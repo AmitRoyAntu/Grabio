@@ -1,6 +1,7 @@
 """Local YouTube downloader web app (Flask + yt-dlp).
 Run:  python app.py   then open http://127.0.0.1:5000
-Requires ffmpeg on PATH (needed for mp3 conversion and merging video+audio).
+ffmpeg is bundled via imageio-ffmpeg (pip install imageio-ffmpeg).
+Falls back to any ffmpeg found on PATH.
 """
 import os, re, shutil, tempfile, threading, uuid, zipfile
 from flask import Flask, jsonify, request, send_file, send_from_directory
@@ -9,7 +10,22 @@ import yt_dlp
 app = Flask(__name__, static_folder="static")
 WORK = os.path.join(tempfile.gettempdir(), "ytgrab")
 os.makedirs(WORK, exist_ok=True)
-JOBS = {}  # id -> dict(status, progress, message, file, name)
+JOBS = {}  # id -> dict(status, progress, message, file, name, songs)
+
+# ── Resolve ffmpeg ─────────────────────────────────────────────────────────
+# Prefer the static binary bundled with imageio-ffmpeg so users don't need
+# Homebrew. Falls back to whatever is on PATH.
+def _resolve_ffmpeg() -> str | None:
+    try:
+        import imageio_ffmpeg
+        path = imageio_ffmpeg.get_ffmpeg_exe()
+        if path and os.path.isfile(path):
+            return path
+    except Exception:
+        pass
+    return shutil.which("ffmpeg")
+
+FFMPEG_BIN = _resolve_ffmpeg()
 
 
 def safe(name):
@@ -24,6 +40,8 @@ def opts_for(fmt, quality, outtmpl, hook):
         "noprogress": True,
         "ignoreerrors": True,
     }
+    if FFMPEG_BIN:
+        base["ffmpeg_location"] = FFMPEG_BIN
     if fmt == "mp3":
         base.update(
             format="bestaudio/best",
@@ -44,12 +62,22 @@ def opts_for(fmt, quality, outtmpl, hook):
     return base
 
 
-def run_job(job_id, urls, title, fmt, quality, custom_name=None, serialize=False):
+def run_job(job_id, urls, titles, fmt, quality, custom_name=None, serialize=False):
+    """
+    urls   – list of video URLs (one per song)
+    titles – parallel list of song titles (same length, may be None entries)
+    """
     job = JOBS[job_id]
     folder = os.path.join(WORK, job_id)
     os.makedirs(folder, exist_ok=True)
     n = len(urls)
     state = {"i": 0}
+
+    # Initialise per-song state
+    songs = job.setdefault("songs", {})
+    for i, u in enumerate(urls):
+        vid = u.split("v=")[-1] if "v=" in u else u
+        songs[vid] = {"status": "pending", "title": (titles[i] if titles else None) or vid}
 
     def hook(d):
         if d["status"] == "downloading":
@@ -64,10 +92,21 @@ def run_job(job_id, urls, title, fmt, quality, custom_name=None, serialize=False
         tmpl = os.path.join(folder, "%(title)s.%(ext)s")
         for i, u in enumerate(urls):
             state["i"] = i
+            vid = u.split("v=")[-1] if "v=" in u else u
+            songs[vid]["status"] = "downloading"
+            before = set(f for f in os.listdir(folder)
+                         if not f.endswith((".part", ".ytdl", ".webp", ".jpg", ".zip")))
             o = opts_for(fmt, quality, tmpl, hook)
             o["noplaylist"] = True
             with yt_dlp.YoutubeDL(o) as ydl:
                 ydl.download([u])
+            after = set(f for f in os.listdir(folder)
+                        if not f.endswith((".part", ".ytdl", ".webp", ".jpg", ".zip")))
+            new_files = after - before
+            if new_files:
+                songs[vid]["status"] = "done"
+            else:
+                songs[vid]["status"] = "failed"
         files = [f for f in os.listdir(folder)
                  if not f.endswith((".part", ".ytdl", ".webp", ".jpg", ".zip"))]
         if not files:
@@ -121,7 +160,12 @@ def info():
         items = None
         if entries is not None:
             items = [
-                {"id": e["id"], "title": e.get("title") or e["id"], "duration": e.get("duration")}
+                {
+                    "id": e["id"],
+                    "title": e.get("title") or e["id"],
+                    "duration": e.get("duration"),
+                    "filesize_approx": e.get("filesize_approx"),
+                }
                 for e in entries
                 if e and e.get("id") and not str(e.get("title", "")).startswith(("[Private", "[Deleted"))
             ]
@@ -132,6 +176,8 @@ def info():
             count=len(items) if items is not None else 1,
             thumbnail=i.get("thumbnail"),
             channel=i.get("uploader") or i.get("channel"),
+            duration=i.get("duration"),
+            filesize_approx=i.get("filesize_approx"),
         )
     except Exception as e:
         return jsonify(error=f"Couldn't read that link: {str(e)[:200]}"), 400
@@ -141,11 +187,14 @@ def info():
 def download():
     d = request.json or {}
     job_id = uuid.uuid4().hex[:12]
-    JOBS[job_id] = dict(status="running", progress=0, message="Starting…")
+    JOBS[job_id] = dict(status="running", progress=0, message="Starting…", songs={})
     ids = [i for i in (d.get("ids") or []) if re.fullmatch(r"[\w-]{6,20}", str(i))]
+    song_titles = d.get("titles") or []
     urls = [f"https://www.youtube.com/watch?v={i}" for i in ids] or [d.get("url", "")]
+    while len(song_titles) < len(urls):
+        song_titles.append(None)
     threading.Thread(target=run_job, daemon=True, args=(
-        job_id, urls, d.get("title"), d.get("format", "mp4"), d.get("quality"),
+        job_id, urls, song_titles, d.get("format", "mp4"), d.get("quality"),
         d.get("custom_name") or None), kwargs={"serialize": bool(d.get("serialize"))}).start()
     return jsonify(id=job_id)
 
@@ -155,7 +204,7 @@ def status(job_id):
     j = JOBS.get(job_id)
     if not j:
         return jsonify(error="Unknown job"), 404
-    return jsonify({k: j.get(k) for k in ("status", "progress", "message", "name")})
+    return jsonify({k: j.get(k) for k in ("status", "progress", "message", "name", "songs")})
 
 
 @app.get("/api/file/<job_id>")
@@ -167,6 +216,9 @@ def file(job_id):
 
 
 if __name__ == "__main__":
-    if not shutil.which("ffmpeg"):
-        print("WARNING: ffmpeg not found on PATH. MP3 and 1080p+ downloads will fail.")
+    if FFMPEG_BIN:
+        print(f"ffmpeg: {FFMPEG_BIN}")
+    else:
+        print("WARNING: ffmpeg not found. Install imageio-ffmpeg (`uv pip install imageio-ffmpeg`) "
+              "or add ffmpeg to PATH. MP3/M4A conversion and 1080p+ merging will fail without it.")
     app.run(host="127.0.0.1", port=5000, debug=False)

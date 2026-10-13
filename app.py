@@ -36,7 +36,7 @@ def _apply_security_headers(response):
 # ── Resolve ffmpeg ──────────────────────────────────────────────────────────
 def _resolve_ffmpeg() -> str | None:
     try:
-        import imageio_ffmpeg
+        import imageio_ffmpeg  # type: ignore
         path = imageio_ffmpeg.get_ffmpeg_exe()
         if path and os.path.isfile(path):
             return path

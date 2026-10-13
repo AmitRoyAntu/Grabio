@@ -276,7 +276,7 @@ def index():
 def info():
     url = (request.json or {}).get("url", "").strip()
     if not url:
-        return jsonify(error="Paste a YouTube link first."), 400
+        return jsonify(error="Paste a link first."), 400
     try:
         with yt_dlp.YoutubeDL({"quiet": True, "extract_flat": "in_playlist",
                                "skip_download": True}) as ydl:
@@ -287,6 +287,10 @@ def info():
             items = [
                 {
                     "id":             e["id"],
+                    # Full URL so the downloader works for any platform,
+                    # not just YouTube (where we'd reconstruct watch?v=ID)
+                    "webpage_url":    (e.get("webpage_url") or e.get("url")
+                                       or f"https://www.youtube.com/watch?v={e['id']}"),
                     "title":          e.get("title") or e["id"],
                     "duration":       e.get("duration"),
                     "filesize_approx":e.get("filesize_approx"),
@@ -315,10 +319,17 @@ def download():
     stop   = threading.Event()
     JOBS[job_id] = dict(status="running", progress=0, message="Starting…",
                         songs={}, _stop=stop)
-    ids         = [i for i in (d.get("ids") or []) if re.fullmatch(r"[\w-]{6,20}", str(i))]
     song_titles = d.get("titles") or []
-    urls        = [f"https://www.youtube.com/watch?v={i}" for i in ids] or [d.get("url","")]
-    while len(song_titles) < len(urls):
+
+    # video_urls: list of full URLs sent by the frontend (works for all platforms).
+    # ids: legacy YouTube-only path — kept for backward compatibility.
+    video_urls = [u for u in (d.get("video_urls") or []) if u]
+    if not video_urls:
+        ids = [i for i in (d.get("ids") or []) if re.fullmatch(r"[\w-]{6,20}", str(i))]
+        video_urls = ([f"https://www.youtube.com/watch?v={i}" for i in ids]
+                      or [d.get("url", "")])
+
+    while len(song_titles) < len(video_urls):
         song_titles.append(None)
 
     # Validate save_to path if provided
@@ -330,7 +341,7 @@ def download():
 
     threading.Thread(
         target=run_job, daemon=True,
-        args=(job_id, urls, song_titles, d.get("format","mp4"), d.get("quality")),
+        args=(job_id, video_urls, song_titles, d.get("format","mp4"), d.get("quality")),
         kwargs=dict(custom_name=d.get("custom_name") or None,
                     serialize=bool(d.get("serialize")),
                     save_to=save_to)

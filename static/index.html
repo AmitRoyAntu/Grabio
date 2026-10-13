@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>YT Grab</title>
+<title>VidGrab — YouTube, Instagram, TikTok & more</title>
 <script>
   try{ document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light'; }
   catch(e){ document.documentElement.dataset.theme = 'light'; }
@@ -258,10 +258,10 @@
 
   <main>
     <h1>Paste a link.<br>Keep the file.</h1>
-    <p class="sub">Save any YouTube video or playlist as MP4, MP3 or M4A. Everything runs on your own computer.</p>
+    <p class="sub">Download videos from YouTube, Instagram, TikTok, Facebook and more — as MP4, MP3 or M4A. Everything runs on your own computer.</p>
 
     <div class="finder">
-      <input id="url" type="text" placeholder="Paste a YouTube video or playlist link" autocomplete="off" aria-label="YouTube link">
+      <input id="url" type="text" placeholder="Paste a YouTube, Instagram, TikTok or Facebook link" autocomplete="off" aria-label="Video link">
       <button id="check" class="btn" type="button">Check link</button>
     </div>
     <div id="cmsg" class="note" role="status"></div>
@@ -379,7 +379,10 @@ $('theme').onclick=()=>{
 };
 paintTheme();
 
-/* ── yt-dlp version check ─────────────────────────────────────────────── */
+/* ── supported domains ──────────────────────────────────────────────────── */
+const SUPPORTED = ['youtube.com','youtu.be','facebook.com','fb.watch','fb.com',
+                   'instagram.com','tiktok.com','vm.tiktok.com','vt.tiktok.com'];
+function isSupportedUrl(t){ return SUPPORTED.some(d=>t.includes(d)); }
 (async()=>{
   try{
     const d = await (await fetch('/api/ytdlp-version')).json();
@@ -413,7 +416,7 @@ document.addEventListener('dragleave', e=>{ if(!e.relatedTarget) document.body.c
 document.addEventListener('drop', e=>{
   e.preventDefault(); document.body.classList.remove('drag-over');
   const text = e.dataTransfer.getData('text');
-  if(text && text.includes('youtube.com') || text && text.includes('youtu.be')){
+  if(text && isSupportedUrl(text)){
     $('url').value=text; $('check').click();
   }
 });
@@ -423,8 +426,8 @@ document.addEventListener('visibilitychange', async()=>{
   if(document.visibilityState!=='visible') return;
   try{
     const t=await navigator.clipboard.readText();
-    if((t.includes('youtube.com')||t.includes('youtu.be')) && t.trim()!==$('url').value.trim()){
-      $('url').value=t.trim(); say('cmsg','YouTube link detected from clipboard — press Check link',false);
+    if(isSupportedUrl(t) && t.trim()!==$('url').value.trim()){
+      $('url').value=t.trim(); say('cmsg','Link detected from clipboard — press Check link',false);
     }
   }catch(e){}
 });
@@ -546,7 +549,7 @@ $('check').onclick=async()=>{
     $('filter').value='';
     $('songs').style.display=d.is_playlist?'block':'none';
     $('list').innerHTML=(d.entries||[]).map(e=>
-      `<li data-id="${esc(e.id)}"><label><input type="checkbox" value="${esc(e.id)}" checked><span class="t" title="${esc(e.title)}">${esc(e.title)}</span><span class="d">${fmtDur(e.duration)}</span><span class="sico" id="si-${esc(e.id)}"></span></label></li>`).join('');
+      `<li data-id="${esc(e.id)}" data-url="${esc(e.webpage_url||'')}"><label><input type="checkbox" value="${esc(e.id)}" checked><span class="t" title="${esc(e.title)}">${esc(e.title)}</span><span class="d">${fmtDur(e.duration)}</span><span class="sico" id="si-${esc(e.id)}"></span></label></li>`).join('');
     say('cmsg',''); say('msg','');
     $('fill').style.width='0';
     const res=$('result'); res.classList.remove('show'); void res.offsetWidth; res.classList.add('show');
@@ -570,6 +573,8 @@ $('go').onclick=async()=>{
 
   const selectedBoxes = boxes().filter(b=>b.checked);
   const selectedIds   = selectedBoxes.map(b=>b.value);
+  // Use stored webpage_url for each selected entry — works for all platforms
+  const selectedUrls  = selectedBoxes.map(b=>b.closest('li').dataset.url||'').filter(Boolean);
   const selectedTitles= selectedBoxes.map(b=>b.closest('li').querySelector('.t').textContent);
   const fmt=document.querySelector('input[name=fmt]:checked').value;
   const customName=($('fname').value||'').trim().replace(/[\\/:*?"<>|]+/g,'_').slice(0,120)||'download';
@@ -580,7 +585,9 @@ $('go').onclick=async()=>{
               quality:$('q').value,title:plTitle,
               custom_name:customName,
               serialize: isPlaylist && $('serialize').checked,
-              ids:isPlaylist?selectedIds:null,
+              // Send full video_urls for any platform; fall back to ids for YouTube
+              video_urls: isPlaylist ? (selectedUrls.length ? selectedUrls : selectedIds) : null,
+              ids: isPlaylist && !selectedUrls.length ? selectedIds : null,
               titles:isPlaylist?selectedTitles:null,
               save_to: saveTo||null};
 

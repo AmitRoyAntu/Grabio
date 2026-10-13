@@ -1,6 +1,6 @@
-# YT Grab
+# VidGrab (YT Grab)
 
-A local web app to download YouTube videos and playlists as **MP4, MP3, or M4A** — runs entirely on your own computer. No ads, no accounts, no cloud.
+A local web app to download videos from **YouTube, Facebook, Instagram, TikTok** and [any other yt-dlp-supported site](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) — as **MP4, MP3, or M4A**. Runs entirely on your own computer. No ads, no accounts, no cloud.
 
 ---
 
@@ -15,6 +15,16 @@ A local web app to download YouTube videos and playlists as **MP4, MP3, or M4A**
 - 🔄 **yt-dlp auto-update** — in-app notice and one-click update when yt-dlp is out of date
 - 🌗 **Dark / light mode**
 - 🔋 **No system ffmpeg needed** — ships a bundled static binary via `imageio-ffmpeg`
+
+### Supported platforms
+
+| Platform | Videos | Playlists | Notes |
+|---|---|---|---|
+| YouTube | ✅ | ✅ | Full support |
+| TikTok | ✅ | ✅ | User feeds work as playlists |
+| Instagram | ✅ | ✅ | Reels, posts; private content needs cookies |
+| Facebook | ✅ | ⚠️ | Public videos/Reels; some require login |
+| + [1000 more](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) | ✅ | varies | Anything yt-dlp supports |
 
 ---
 

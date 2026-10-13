@@ -404,8 +404,16 @@ def ytdlp_update():
 
 
 if __name__ == "__main__":
+    HOST, PORT = "127.0.0.1", 5000
     if FFMPEG_BIN:
-        print(f"ffmpeg: {FFMPEG_BIN}")
+        print(f"ffmpeg : {FFMPEG_BIN}")
     else:
         print("WARNING: ffmpeg not found. Install imageio-ffmpeg or add ffmpeg to PATH.")
-    app.run(host="127.0.0.1", port=5000, debug=False)
+    try:
+        from waitress import serve
+        print(f"Serving on http://{HOST}:{PORT}  (waitress)")
+        serve(app, host=HOST, port=PORT, threads=8)
+    except ImportError:
+        print(f"waitress not installed — using Flask dev server on http://{HOST}:{PORT}")
+        print("  Run:  pip install waitress   for a production-grade server.")
+        app.run(host=HOST, port=PORT, debug=False)

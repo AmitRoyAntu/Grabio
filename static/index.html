@@ -5,19 +5,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Grabio — YouTube, Twitch, X / Twitter, Instagram & more</title>
-  <meta name="description" content="Free online video and audio downloader for YouTube, Twitch, Twitter (X), TikTok, Instagram, and Facebook. Convert to MP4, MP3, or M4A with high quality.">
-  <meta name="keywords" content="video downloader, youtube to mp3, twitter video downloader, twitch clip downloader, tiktok downloader, instagram reels downloader">
+  <meta name="description"
+    content="Free online video and audio downloader for YouTube, Twitch, Twitter (X), TikTok, Instagram, and Facebook. Convert to MP4, MP3, or M4A with high quality.">
+  <meta name="keywords"
+    content="video downloader, youtube to mp3, twitter video downloader, twitch clip downloader, tiktok downloader, instagram reels downloader">
   <meta name="robots" content="index, follow">
+
+  <!-- Favicons & App Icons -->
+  <link rel="icon" type="image/png" sizes="128x128" href="/static/favicon.png">
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="Grabio — Universal Video & Audio Downloader">
-  <meta property="og:description" content="Download videos & audio from YouTube, Twitch, Twitter (X), TikTok, and Instagram in MP4 or MP3 format.">
+  <meta property="og:description"
+    content="Download videos & audio from YouTube, Twitch, Twitter (X), TikTok, and Instagram in MP4 or MP3 format.">
+  <meta property="og:image" content="/static/favicon.png">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Grabio — Universal Video & Audio Downloader">
-  <meta name="twitter:description" content="Download videos & audio from YouTube, Twitch, Twitter (X), TikTok, and Instagram in MP4 or MP3 format.">
+  <meta name="twitter:description"
+    content="Download videos & audio from YouTube, Twitch, Twitter (X), TikTok, and Instagram in MP4 or MP3 format.">
 
   <!-- Schema.org WebApplication Structured Data for Google -->
   <script type="application/ld+json">
@@ -47,23 +56,35 @@
   <style>
     :root {
       /* Playful Geometric Tokens */
-      --bg: #FFFDF5;            /* Warm Cream / Paper feel */
-      --surface: #ffffff;       /* Pure White Card */
-      --soft: #f8fafc;          /* Slate 50 */
+      --bg: #FFFDF5;
+      /* Warm Cream / Paper feel */
+      --surface: #ffffff;
+      /* Pure White Card */
+      --soft: #f8fafc;
+      /* Slate 50 */
       --thumb: #ffffff;
-      --ink: #1e293b;           /* Slate 800 */
+      --ink: #1e293b;
+      /* Slate 800 */
       --foreground: #1e293b;
-      --muted: #64748b;         /* Slate 500 */
-      --muted-bg: #f1f5f9;      /* Slate 100 */
-      --line: #1e293b;          /* Chunky dark border */
-      --line-soft: #e2e8f0;     /* Slate 200 */
-      --accent: #8b5cf6;        /* Vivid Violet (Primary) */
+      --muted: #64748b;
+      /* Slate 500 */
+      --muted-bg: #f1f5f9;
+      /* Slate 100 */
+      --line: #1e293b;
+      /* Chunky dark border */
+      --line-soft: #e2e8f0;
+      /* Slate 200 */
+      --accent: #8b5cf6;
+      /* Vivid Violet (Primary) */
       --accent-hover: #7c3aed;
       --accent-fill: #6d28d9;
       --on-accent: #ffffff;
-      --secondary: #f472b6;     /* Hot Pink */
-      --tertiary: #fbbf24;      /* Amber / Yellow */
-      --quaternary: #34d399;    /* Emerald / Mint */
+      --secondary: #f472b6;
+      /* Hot Pink */
+      --tertiary: #fbbf24;
+      /* Amber / Yellow */
+      --quaternary: #34d399;
+      /* Emerald / Mint */
       --ring: #8b5cf6;
       --err: #ef4444;
       --warn: #d97706;
@@ -80,8 +101,10 @@
     }
 
     :root[data-theme="dark"] {
-      --bg: #0f172a;            /* Slate 900 */
-      --surface: #1e293b;       /* Slate 800 */
+      --bg: #0f172a;
+      /* Slate 900 */
+      --surface: #1e293b;
+      /* Slate 800 */
       --soft: #162032;
       --thumb: #334155;
       --ink: #f8fafc;
@@ -207,19 +230,29 @@
     }
 
     .mark {
-      width: 38px;
-      height: 38px;
+      width: 40px;
+      height: 40px;
       border-radius: 12px;
-      background: var(--accent);
+      background: #FAF9F5;
       border: 2px solid var(--line);
       box-shadow: 3px 3px 0px 0px var(--line);
       display: grid;
       place-items: center;
+      overflow: hidden;
+      padding: 3px;
+      flex: none;
+      transition: transform .2s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
-    .mark svg {
-      width: 18px;
-      height: 18px
+    .brand:hover .mark {
+      transform: rotate(-3deg) scale(1.05);
+    }
+
+    .brand-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
     }
 
     .icon {
@@ -379,20 +412,75 @@
       flex: none;
     }
 
-    .p-yt { background: #fee2e2; color: #b91c1c; }
-    .p-tw { background: #f3e8ff; color: #7e22ce; }
-    .p-x  { background: #e2e8f0; color: #0f172a; }
-    .p-ig { background: #fce7f3; color: #be185d; }
-    .p-tt { background: #f1f5f9; color: #0f172a; }
-    .p-fb { background: #dbeafe; color: #1d4ed8; }
-    .p-more { background: #ecfdf5; color: #047857; }
-    :root[data-theme="dark"] .p-yt { background: #450a0a; color: #fca5a5; }
-    :root[data-theme="dark"] .p-tw { background: #3b0764; color: #d8b4fe; }
-    :root[data-theme="dark"] .p-x  { background: #1e293b; color: #f1f5f9; }
-    :root[data-theme="dark"] .p-ig { background: #500724; color: #f472b6; }
-    :root[data-theme="dark"] .p-tt { background: #1e293b; color: #f8fafc; }
-    :root[data-theme="dark"] .p-fb { background: #172554; color: #93c5fd; }
-    :root[data-theme="dark"] .p-more { background: #064e3b; color: #6ee7b7; }
+    .p-yt {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .p-tw {
+      background: #f3e8ff;
+      color: #7e22ce;
+    }
+
+    .p-x {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
+    .p-ig {
+      background: #fce7f3;
+      color: #be185d;
+    }
+
+    .p-tt {
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+
+    .p-fb {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .p-more {
+      background: #ecfdf5;
+      color: #047857;
+    }
+
+    :root[data-theme="dark"] .p-yt {
+      background: #450a0a;
+      color: #fca5a5;
+    }
+
+    :root[data-theme="dark"] .p-tw {
+      background: #3b0764;
+      color: #d8b4fe;
+    }
+
+    :root[data-theme="dark"] .p-x {
+      background: #1e293b;
+      color: #f1f5f9;
+    }
+
+    :root[data-theme="dark"] .p-ig {
+      background: #500724;
+      color: #f472b6;
+    }
+
+    :root[data-theme="dark"] .p-tt {
+      background: #1e293b;
+      color: #f8fafc;
+    }
+
+    :root[data-theme="dark"] .p-fb {
+      background: #172554;
+      color: #93c5fd;
+    }
+
+    :root[data-theme="dark"] .p-more {
+      background: #064e3b;
+      color: #6ee7b7;
+    }
 
     /* ── Search section & Staffs ───────────────────────────────────────── */
     .search-section {
@@ -428,9 +516,17 @@
       border: 1.5px solid var(--line);
     }
 
-    .dot-red { background: #f87171; }
-    .dot-yellow { background: #fbbf24; }
-    .dot-green { background: #34d399; }
+    .dot-red {
+      background: #f87171;
+    }
+
+    .dot-yellow {
+      background: #fbbf24;
+    }
+
+    .dot-green {
+      background: #34d399;
+    }
 
     .search-card-title {
       font: 700 .85rem var(--display);
@@ -486,12 +582,32 @@
       flex: none;
     }
 
-    .card-violet .sticker-icon { background: #ede9fe; color: var(--accent); }
-    .card-pink .sticker-icon { background: #fce7f3; color: var(--secondary); }
-    .card-yellow .sticker-icon { background: #fef3c7; color: var(--tertiary); }
-    :root[data-theme="dark"] .card-violet .sticker-icon { background: #2e1065; }
-    :root[data-theme="dark"] .card-pink .sticker-icon { background: #500724; }
-    :root[data-theme="dark"] .card-yellow .sticker-icon { background: #451a03; }
+    .card-violet .sticker-icon {
+      background: #ede9fe;
+      color: var(--accent);
+    }
+
+    .card-pink .sticker-icon {
+      background: #fce7f3;
+      color: var(--secondary);
+    }
+
+    .card-yellow .sticker-icon {
+      background: #fef3c7;
+      color: var(--tertiary);
+    }
+
+    :root[data-theme="dark"] .card-violet .sticker-icon {
+      background: #2e1065;
+    }
+
+    :root[data-theme="dark"] .card-pink .sticker-icon {
+      background: #500724;
+    }
+
+    :root[data-theme="dark"] .card-yellow .sticker-icon {
+      background: #451a03;
+    }
 
     .sticker-card strong {
       display: block;
@@ -666,6 +782,7 @@
         opacity: 0;
         transform: scale(0.96) translateY(10px);
       }
+
       100% {
         opacity: 1;
         transform: scale(1) translateY(0);
@@ -1404,10 +1521,9 @@
 
     <header>
       <div class="brand">
-        <span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M8 2.5v8M4.5 7.5L8 11l3.5-3.5M3 13.5h10" />
-          </svg></span>
+        <span class="mark" aria-hidden="true">
+          <img src="/static/favicon.png" alt="Grabio" class="brand-img" width="34" height="34">
+        </span>
         Grabio
       </div>
       <button id="theme" class="icon" type="button" aria-label="Switch theme">
@@ -1434,12 +1550,15 @@
 
         <div class="hero-title-wrap">
           <h1>Paste a link. <span class="accent-word">Keep the file.</span></h1>
-          <svg class="hero-squiggle" viewBox="0 0 240 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <path d="M3 14C35 4 65 16 95 8C125 0 155 16 185 8C205 2 225 12 237 14" stroke="var(--secondary)" stroke-width="5" stroke-linecap="round"/>
+          <svg class="hero-squiggle" viewBox="0 0 240 18" fill="none" xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true">
+            <path d="M3 14C35 4 65 16 95 8C125 0 155 16 185 8C205 2 225 12 237 14" stroke="var(--secondary)"
+              stroke-width="5" stroke-linecap="round" />
           </svg>
         </div>
 
-        <p class="sub">Download videos from YouTube, Twitch, Twitter (X), Instagram, TikTok, Facebook and more — as MP4, MP3 or M4A. Runs entirely on your own computer with zero cloud limits, ads, or tracking.</p>
+        <p class="sub">Download videos from YouTube, Twitch, Twitter (X), Instagram, TikTok, Facebook and more — as MP4,
+          MP3 or M4A. Runs entirely on your own computer with zero cloud limits, ads, or tracking.</p>
       </section>
 
       <!-- Search bar, status and result section -->
@@ -1456,171 +1575,193 @@
 
           <div class="finder">
             <div class="finder-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                stroke-linejoin="round">
                 <circle cx="11" cy="11" r="8"></circle>
                 <path d="m21 21-4.35-4.35"></path>
               </svg>
             </div>
-            <input id="url" type="text" placeholder="Paste YouTube, Twitch, X / Twitter, Instagram, TikTok link…" autocomplete="off"
-              aria-label="Video link">
+            <input id="url" type="text" placeholder="Paste YouTube, Twitch, X / Twitter, Instagram, TikTok link…"
+              autocomplete="off" aria-label="Video link">
             <button id="check" class="btn btn-candy" type="button">
               <span>Check link</span>
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M3 8h10M9 4l4 4-4 4"/>
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 8h10M9 4l4 4-4 4" />
               </svg>
             </button>
           </div>
           <div id="cmsg" class="note" role="status"></div>
 
           <div class="drop-hint">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15" aria-hidden="true">
-              <path d="M12 2v10M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" width="15" height="15" aria-hidden="true">
+              <path
+                d="M12 2v10M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
             </svg>
             <span>Tip: Drag &amp; drop any link here, or copy link to clipboard</span>
           </div>
         </div>
 
         <section id="result" aria-live="polite">
-        <div class="preview">
-          <img id="thumb" alt="">
-          <div>
-            <h2 id="title"></h2><small id="meta"></small>
-          </div>
-        </div>
-
-        <details id="songs" open>
-          <summary><span>Songs</span><span id="selcount"></span></summary>
-          <div class="filter-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-              stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" />
-            </svg>
-            <input id="filter" type="search" placeholder="Filter songs…" autocomplete="off">
-          </div>
-          <div class="tools">
-            <button type="button" class="chip" id="selall">Select all</button>
-            <button type="button" class="chip" id="selnone">Select none</button>
-          </div>
-          <ul id="list"></ul>
-        </details>
-
-        <div class="opts">
-          <div class="grp">
-            <span class="cap" id="fmtcap">Format</span>
-            <div class="seg" role="radiogroup" aria-labelledby="fmtcap">
-              <input type="radio" name="fmt" id="f-mp4" value="mp4" checked><label for="f-mp4">Video MP4</label>
-              <input type="radio" name="fmt" id="f-mp3" value="mp3"><label for="f-mp3">Audio MP3</label>
-              <input type="radio" name="fmt" id="f-m4a" value="m4a"><label for="f-m4a">Audio M4A</label>
-              <span class="thumb" id="segthumb"></span>
+          <div class="preview">
+            <img id="thumb" alt="">
+            <div>
+              <h2 id="title"></h2><small id="meta"></small>
             </div>
           </div>
-          <div class="grp">
-            <label class="cap" for="q">Quality</label>
-            <div style="display:flex;align-items:center;gap:6px">
-              <select id="q"></select>
-              <span class="size-hint" id="size-hint"></span>
+
+          <details id="songs" open>
+            <summary><span>Songs</span><span id="selcount"></span></summary>
+            <div class="filter-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+              <input id="filter" type="search" placeholder="Filter songs…" autocomplete="off">
+            </div>
+            <div class="tools">
+              <button type="button" class="chip" id="selall">Select all</button>
+              <button type="button" class="chip" id="selnone">Select none</button>
+            </div>
+            <ul id="list"></ul>
+          </details>
+
+          <div class="opts">
+            <div class="grp">
+              <span class="cap" id="fmtcap">Format</span>
+              <div class="seg" role="radiogroup" aria-labelledby="fmtcap">
+                <input type="radio" name="fmt" id="f-mp4" value="mp4" checked><label for="f-mp4">Video MP4</label>
+                <input type="radio" name="fmt" id="f-mp3" value="mp3"><label for="f-mp3">Audio MP3</label>
+                <input type="radio" name="fmt" id="f-m4a" value="m4a"><label for="f-m4a">Audio M4A</label>
+                <span class="thumb" id="segthumb"></span>
+              </div>
+            </div>
+            <div class="grp">
+              <label class="cap" for="q">Quality</label>
+              <div style="display:flex;align-items:center;gap:6px">
+                <select id="q"></select>
+                <span class="size-hint" id="size-hint"></span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="fname-row">
-          <label class="cap" for="fname">File name</label>
-          <div class="fname-wrap">
-            <input id="fname" type="text" placeholder="Enter file name" autocomplete="off" spellcheck="false">
-            <span class="fname-ext" id="fname-ext">.mp4</span>
+          <div class="fname-row">
+            <label class="cap" for="fname">File name</label>
+            <div class="fname-wrap">
+              <input id="fname" type="text" placeholder="Enter file name" autocomplete="off" spellcheck="false">
+              <span class="fname-ext" id="fname-ext">.mp4</span>
+            </div>
           </div>
-        </div>
 
 
-        <!-- Serialize toggle (playlists only) -->
-        <div class="serialize-row" id="serialize-row">
-          <span class="serialize-icon" aria-hidden="true">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"
-              stroke-linejoin="round">
-              <path d="M3 4h2M3 8h2M3 12h2" />
-              <path d="M7 4h6M7 8h6M7 12h6" />
-            </svg>
-          </span>
-          <span class="slabel">
-            <strong>Serialize filenames</strong>
-            <small>Prefix each file: 01 Name, 02 Name, 03 Name…</small>
-          </span>
-          <label class="toggle" aria-label="Toggle serialize filenames">
-            <input type="checkbox" id="serialize">
-            <span class="toggle-track"></span>
-            <span class="toggle-knob"></span>
-          </label>
-        </div>
+          <!-- Serialize toggle (playlists only) -->
+          <div class="serialize-row" id="serialize-row">
+            <span class="serialize-icon" aria-hidden="true">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M3 4h2M3 8h2M3 12h2" />
+                <path d="M7 4h6M7 8h6M7 12h6" />
+              </svg>
+            </span>
+            <span class="slabel">
+              <strong>Serialize filenames</strong>
+              <small>Prefix each file: 01 Name, 02 Name, 03 Name…</small>
+            </span>
+            <label class="toggle" aria-label="Toggle serialize filenames">
+              <input type="checkbox" id="serialize">
+              <span class="toggle-track"></span>
+              <span class="toggle-knob"></span>
+            </label>
+          </div>
 
-        <!-- Action row -->
-        <div class="action-row">
-          <button id="go" class="btn go" type="button"><i class="fill" id="fill"></i><span class="lbl"
-              id="golabel">Download</span></button>
-          <button id="cancel" class="btn ghost" type="button">Cancel</button>
-        </div>
-        <div id="msg" class="note" role="status" style="text-align:center"></div>
+          <!-- Action row -->
+          <div class="action-row">
+            <button id="go" class="btn go" type="button"><i class="fill" id="fill"></i><span class="lbl"
+                id="golabel">Download</span></button>
+            <button id="cancel" class="btn ghost" type="button">Cancel</button>
+          </div>
+          <div id="msg" class="note" role="status" style="text-align:center"></div>
+        </section>
       </section>
-    </section>
 
-    <!-- Supported platforms stickers -->
-    <section class="platforms-section">
-      <div class="platforms-bar">
-        <span class="platforms-label">Supported platforms</span>
-        <div class="platform-chips">
-          <span class="p-chip p-yt">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-            YouTube
-          </span>
-          <span class="p-chip p-tw">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg>
-            Twitch
-          </span>
-          <span class="p-chip p-x">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-            Twitter (X)
-          </span>
-          <span class="p-chip p-ig">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-            Instagram
-          </span>
-          <span class="p-chip p-tt">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-1.01-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.27 1.76-.23.85-.09 1.8.38 2.54.49.8 1.34 1.32 2.27 1.45 1.06.18 2.2-.12 2.95-.88.6-.58.9-1.41.89-2.23.03-4.88.01-9.76.02-14.64z"/></svg>
-            TikTok
-          </span>
-          <span class="p-chip p-fb">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-            Facebook
-          </span>
+      <!-- Supported platforms stickers -->
+      <section class="platforms-section">
+        <div class="platforms-bar">
+          <span class="platforms-label">Supported platforms</span>
+          <div class="platform-chips">
+            <span class="p-chip p-yt">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                <path
+                  d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+              </svg>
+              YouTube
+            </span>
+            <span class="p-chip p-tw">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                <path
+                  d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
+              </svg>
+              Twitch
+            </span>
+            <span class="p-chip p-x">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                <path
+                  d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+              Twitter (X)
+            </span>
+            <span class="p-chip p-ig">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                <path
+                  d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+              </svg>
+              Instagram
+            </span>
+            <span class="p-chip p-tt">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                <path
+                  d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-1.01-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.27 1.76-.23.85-.09 1.8.38 2.54.49.8 1.34 1.32 2.27 1.45 1.06.18 2.2-.12 2.95-.88.6-.58.9-1.41.89-2.23.03-4.88.01-9.76.02-14.64z" />
+              </svg>
+              TikTok
+            </span>
+            <span class="p-chip p-fb">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                <path
+                  d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+              </svg>
+              Facebook
+            </span>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- Geometric feature stickers -->
-    <section class="features-stickers">
-      <div class="sticker-card card-violet">
-        <div class="sticker-icon" aria-hidden="true">🎵</div>
-        <div>
-          <strong>Pure Audio &amp; Video</strong>
-          <p>MP4 up to 4K or 320kbps MP3/M4A with embedded artwork &amp; metadata.</p>
+      <!-- Geometric feature stickers -->
+      <section class="features-stickers">
+        <div class="sticker-card card-violet">
+          <div class="sticker-icon" aria-hidden="true">🎵</div>
+          <div>
+            <strong>Pure Audio &amp; Video</strong>
+            <p>MP4 up to 4K or 320kbps MP3/M4A with embedded artwork &amp; metadata.</p>
+          </div>
         </div>
-      </div>
-      <div class="sticker-card card-pink">
-        <div class="sticker-icon" aria-hidden="true">⚡</div>
-        <div>
-          <strong>Playlists &amp; Feeds</strong>
-          <p>Filter songs, pick items individually, or download entire collections.</p>
+        <div class="sticker-card card-pink">
+          <div class="sticker-icon" aria-hidden="true">⚡</div>
+          <div>
+            <strong>Playlists &amp; Feeds</strong>
+            <p>Filter songs, pick items individually, or download entire collections.</p>
+          </div>
         </div>
-      </div>
-      <div class="sticker-card card-yellow">
-        <div class="sticker-icon" aria-hidden="true">🛡️</div>
-        <div>
-          <strong>100% Private &amp; Local</strong>
-          <p>Runs entirely on your computer — no tracking, ads, or data collection.</p>
+        <div class="sticker-card card-yellow">
+          <div class="sticker-icon" aria-hidden="true">🛡️</div>
+          <div>
+            <strong>100% Private &amp; Local</strong>
+            <p>Runs entirely on your computer — no tracking, ads, or data collection.</p>
+          </div>
         </div>
-      </div>
-    </section>
-  </main>
+      </section>
+    </main>
 
     <footer>Only download content you own, that is licensed for reuse, or that you have permission to save. Downloading
       may break YouTube's Terms of Service.</footer>
@@ -1792,7 +1933,13 @@
 
     /* ── check link ───────────────────────────────────────────────────────── */
     $('check').onclick = async () => {
-      const url = $('url').value.trim();
+      let url = $('url').value.trim();
+      url = url.replace(/^(?:fetch|curl|wget)\s+/i, '').trim();
+      $('url').value = url;
+      if (!url) {
+        say('cmsg', 'Paste a link first.', true);
+        return;
+      }
       $('check').disabled = true; say('cmsg', 'Checking link…');
       try {
         const r = await fetch('/api/info', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });

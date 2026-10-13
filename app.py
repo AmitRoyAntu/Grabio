@@ -2,7 +2,7 @@
 Run:  python app.py   then open http://127.0.0.1:5000
 ffmpeg is bundled via imageio-ffmpeg or system PATH.
 """
-import os, re, shutil, subprocess, sys, tempfile, threading, time, uuid, zipfile
+import os, re, shutil, subprocess, sys, tempfile, threading, time, urllib.parse, uuid, zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, jsonify, request, send_file, send_from_directory
 import yt_dlp
@@ -70,9 +70,62 @@ _startup_cleanup()
 threading.Thread(target=_reaper, daemon=True, name="ytgrab-reaper").start()
 
 
+# ── Resolve JS runtime for yt-dlp ──────────────────────────────────────────
+def _resolve_js_runtimes() -> dict:
+    """Detect available JavaScript runtimes (node, deno, bun, quickjs) for yt-dlp.
+    Recent yt-dlp releases use a JS runtime for YouTube signature & n-challenge solving.
+    """
+    for p in ("/opt/homebrew/bin", "/usr/local/bin"):
+        if os.path.isdir(p) and p not in os.environ.get("PATH", ""):
+            os.environ["PATH"] = f"{p}:{os.environ.get('PATH', '')}"
+
+    runtimes = {}
+    for rt in ("deno", "node", "bun", "quickjs"):
+        if shutil.which(rt):
+            runtimes[rt] = {}
+    return runtimes or {"deno": {}}
+
+JS_RUNTIMES = _resolve_js_runtimes()
+
+
 # ── Helpers ─────────────────────────────────────────────────────────────────
 def safe(name: str) -> str:
     return re.sub(r'[\\/:*?"<>|]+', "_", name).strip()[:120] or "download"
+
+
+def clean_and_validate_url(raw_url: str) -> tuple[str | None, str | None]:
+    """Clean and validate input URL.
+    Returns (cleaned_url, error_message).
+    """
+    if not raw_url or not str(raw_url).strip():
+        return None, "Paste a link first."
+
+    url = str(raw_url).strip().strip("'\"<>`")
+    # Clean leading fetch/curl/wget if someone pasted a terminal command or snippet
+    url = re.sub(r"^(?:fetch|curl|wget)\s+", "", url, flags=re.IGNORECASE).strip().strip("'\"<>`")
+
+    # If scheme is missing, check if it looks like a domain name
+    if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", url):
+        if "." in url and " " not in url:
+            url = "https://" + url
+        else:
+            return None, f"'{raw_url.strip()}' is not a valid URL. Please enter a valid video link."
+
+    try:
+        parsed = urllib.parse.urlparse(url)
+    except Exception:
+        return None, f"'{raw_url.strip()}' is not a valid URL."
+
+    if parsed.scheme.lower() not in ("http", "https"):
+        return None, "Only HTTP and HTTPS links are supported."
+
+    if not parsed.netloc or " " in parsed.netloc:
+        return None, f"'{raw_url.strip()}' is not a valid URL."
+
+    if "." not in parsed.netloc and parsed.netloc.lower() not in ("localhost",):
+        return None, f"'{raw_url.strip()}' is not a valid URL."
+
+    return url, None
 
 
 COOKIES_FILE = os.environ.get("COOKIES_FILE") or (
@@ -81,6 +134,8 @@ COOKIES_FILE = os.environ.get("COOKIES_FILE") or (
 PROXY_URL = os.environ.get("PROXY_URL")
 COMMON_YTDL_OPTS = {
     "extractor_args": {"youtube": {"player_client": ["web", "android"]}},
+    "js_runtimes": JS_RUNTIMES,
+    "remote_components": ["ejs:github"],
 }
 if COOKIES_FILE:
     COMMON_YTDL_OPTS["cookiefile"] = COOKIES_FILE
@@ -309,6 +364,11 @@ def robots():
     return send_from_directory("static", "robots.txt")
 
 
+@app.get("/favicon.ico")
+def favicon():
+    return send_from_directory("static", "favicon.ico", mimetype="image/x-icon")
+
+
 @app.get("/sitemap.xml")
 def sitemap():
     return send_from_directory("static", "sitemap.xml", mimetype="application/xml")
@@ -316,14 +376,16 @@ def sitemap():
 
 @app.post("/api/info")
 def info():
-    url = (request.json or {}).get("url", "").strip()
-    if not url:
-        return jsonify(error="Paste a link first."), 400
+    raw_url = (request.json or {}).get("url", "")
+    url, err = clean_and_validate_url(raw_url)
+    if err:
+        return jsonify(error=err), 400
     try:
         ydl_opts = {
             "quiet": True,
             "extract_flat": "in_playlist",
-            "skip_download": True
+            "skip_download": True,
+            "no_warnings": True,
         }
         ydl_opts.update(COMMON_YTDL_OPTS)
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -377,14 +439,27 @@ def download():
     # video_urls: list of full URLs sent by the frontend (works for all platforms).
     # ids: list of item IDs (YouTube IDs, tweet IDs, Twitch VOD/clip IDs).
     entry_ids = [str(i) for i in (d.get("ids") or []) if i]
-    video_urls = [u for u in (d.get("video_urls") or []) if u]
+    raw_video_urls = [u for u in (d.get("video_urls") or []) if u]
+    video_urls = []
+    for u in raw_video_urls:
+        cu, _ = clean_and_validate_url(u)
+        if cu:
+            video_urls.append(cu)
+
     if not video_urls:
         if entry_ids and all(re.fullmatch(r"[\w-]{6,20}", i) for i in entry_ids):
             video_urls = [f"https://www.youtube.com/watch?v={i}" for i in entry_ids]
         else:
-            video_urls = [d.get("url", "")]
-            if not entry_ids and d.get("url"):
-                entry_ids = [_item_id(d.get("url", ""))]
+            raw_url = d.get("url", "")
+            clean_url, err = clean_and_validate_url(raw_url)
+            if err:
+                return jsonify(error=err), 400
+            video_urls = [clean_url]
+            if not entry_ids:
+                entry_ids = [_item_id(clean_url)]
+
+    if not video_urls:
+        return jsonify(error="No valid URLs provided to download."), 400
 
     if len(video_urls) > MAX_PLAYLIST_ITEMS:
         return jsonify(error=f"Maximum {MAX_PLAYLIST_ITEMS} items per batch allowed on public server."), 400
@@ -479,9 +554,13 @@ if __name__ == "__main__":
     HOST = os.environ.get("HOST", "0.0.0.0" if os.environ.get("PORT") else "127.0.0.1")
     PORT = int(os.environ.get("PORT", 5000))
     if FFMPEG_BIN:
-        print(f"ffmpeg : {FFMPEG_BIN}")
+        print(f"ffmpeg     : {FFMPEG_BIN}")
     else:
         print("WARNING: ffmpeg not found. Install imageio-ffmpeg or add ffmpeg to PATH.")
+    if JS_RUNTIMES:
+        print(f"js runtime : {', '.join(JS_RUNTIMES.keys())}")
+    else:
+        print("WARNING: No JS runtime found. Install Node.js or Deno for YouTube challenge solving.")
     try:
         from waitress import serve
         threads = int(os.environ.get("THREADS", 16))

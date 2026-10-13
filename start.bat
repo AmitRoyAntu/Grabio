@@ -1,5 +1,5 @@
 @echo off
-:: start.bat — one-command launcher for YT Grab (Windows)
+:: start.bat — one-command launcher for Grabio (Windows)
 :: Double-click or run from any terminal: start.bat [port]
 setlocal enabledelayedexpansion
 
@@ -56,7 +56,7 @@ start "" /b cmd /c "timeout /t 2 /nobreak >nul && start http://127.0.0.1:%PORT%"
 
 :: ── 4. Launch ────────────────────────────────────────────────────────────
 echo.
-echo   YT Grab ^-^> http://127.0.0.1:%PORT%
+echo   Grabio ^-^> http://127.0.0.1:%PORT%
 echo   Press Ctrl-C to quit
 echo.
 "%PYTHON_VENV%" app.py

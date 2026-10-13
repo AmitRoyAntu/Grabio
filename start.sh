@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# start.sh — one-command launcher for YT Grab (macOS & Linux)
+# start.sh — one-command launcher for Grabio (macOS & Linux)
 # Usage: ./start.sh [port]
 set -euo pipefail
 
@@ -61,7 +61,7 @@ echo "✓  Packages ready"
 
 # ── 4. Launch ──────────────────────────────────────────────────────────────
 echo ""
-echo "  YT Grab → http://127.0.0.1:$PORT"
+echo "  Grabio → http://127.0.0.1:$PORT"
 echo "  Press Ctrl-C to quit"
 echo ""
 exec "$VENV/bin/python" app.py

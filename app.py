@@ -119,12 +119,24 @@ def opts_for(fmt, quality, outtmpl, hook):
 PARALLEL_WORKERS = 3
 
 
+def _item_id(url: str, entry_id: str | None = None) -> str:
+    if entry_id:
+        return str(entry_id)
+    if "v=" in url:
+        return url.split("v=")[-1].split("&")[0]
+    clean = url.split("?")[0].rstrip("/")
+    if "/" in clean:
+        return clean.split("/")[-1]
+    return url
+
+
 def run_job(job_id, urls, titles, fmt, quality,
-            custom_name=None, serialize=False, save_to=None):
+            custom_name=None, serialize=False, save_to=None, entry_ids=None):
     """
-    urls     – list of video URLs
-    titles   – parallel list of song titles
-    save_to  – if set, write files directly to this directory (no zip/browser download)
+    urls       – list of video URLs
+    titles     – parallel list of song titles
+    save_to    – if set, write files directly to this directory (no zip/browser download)
+    entry_ids  – optional parallel list of IDs matching the frontend list items
     """
     job  = JOBS[job_id]
     stop: threading.Event = job["_stop"]
@@ -135,7 +147,8 @@ def run_job(job_id, urls, titles, fmt, quality,
 
     songs = job.setdefault("songs", {})
     for i, u in enumerate(urls):
-        vid = u.split("v=")[-1] if "v=" in u else u
+        eid = entry_ids[i] if (entry_ids and i < len(entry_ids)) else None
+        vid = _item_id(u, eid)
         songs[vid] = {"status": "pending", "title": (titles[i] if titles else None) or vid}
 
     done_count = [0]
@@ -143,12 +156,12 @@ def run_job(job_id, urls, titles, fmt, quality,
     folder_lock = threading.Lock()
 
     def download_one(idx, url):
+        eid = entry_ids[idx] if (entry_ids and idx < len(entry_ids)) else None
+        vid = _item_id(url, eid)
         if stop.is_set():
-            vid = url.split("v=")[-1] if "v=" in url else url
             songs[vid]["status"] = "cancelled"
             return vid, False
 
-        vid = url.split("v=")[-1] if "v=" in url else url
         songs[vid]["status"] = "downloading"
 
         def hook(d):
@@ -187,13 +200,14 @@ def run_job(job_id, urls, titles, fmt, quality,
     try:
         workers = min(PARALLEL_WORKERS, n)
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            futs = {pool.submit(download_one, i, u): u for i, u in enumerate(urls)}
+            futs = {pool.submit(download_one, i, u): (i, u) for i, u in enumerate(urls)}
             for fut in as_completed(futs):
                 try:
                     fut.result()
                 except Exception:
-                    url = futs[fut]
-                    vid = url.split("v=")[-1] if "v=" in url else url
+                    i, url = futs[fut]
+                    eid = entry_ids[i] if (entry_ids and i < len(entry_ids)) else None
+                    vid = _item_id(url, eid)
                     songs[vid]["status"] = "failed"
 
         if stop.is_set():
@@ -298,13 +312,19 @@ def info():
                 for e in entries
                 if e and e.get("id") and not str(e.get("title","")).startswith(("[Private","[Deleted"))
             ]
+        thumb = i.get("thumbnail")
+        if not thumb and i.get("thumbnails"):
+            thumb = i["thumbnails"][-1].get("url")
+        channel = i.get("uploader") or i.get("channel") or i.get("uploader_id") or i.get("creator")
+        title = i.get("title") or (i.get("description", "").split("\n")[0][:80] if i.get("description") else None)
+
         return jsonify(
-            title=i.get("title"),
+            title=title,
             is_playlist=items is not None,
             entries=items or [],
             count=len(items) if items is not None else 1,
-            thumbnail=i.get("thumbnail"),
-            channel=i.get("uploader") or i.get("channel"),
+            thumbnail=thumb,
+            channel=channel,
             duration=i.get("duration"),
             filesize_approx=i.get("filesize_approx"),
         )
@@ -322,12 +342,16 @@ def download():
     song_titles = d.get("titles") or []
 
     # video_urls: list of full URLs sent by the frontend (works for all platforms).
-    # ids: legacy YouTube-only path — kept for backward compatibility.
+    # ids: list of item IDs (YouTube IDs, tweet IDs, Twitch VOD/clip IDs).
+    entry_ids = [str(i) for i in (d.get("ids") or []) if i]
     video_urls = [u for u in (d.get("video_urls") or []) if u]
     if not video_urls:
-        ids = [i for i in (d.get("ids") or []) if re.fullmatch(r"[\w-]{6,20}", str(i))]
-        video_urls = ([f"https://www.youtube.com/watch?v={i}" for i in ids]
-                      or [d.get("url", "")])
+        if entry_ids and all(re.fullmatch(r"[\w-]{6,20}", i) for i in entry_ids):
+            video_urls = [f"https://www.youtube.com/watch?v={i}" for i in entry_ids]
+        else:
+            video_urls = [d.get("url", "")]
+            if not entry_ids and d.get("url"):
+                entry_ids = [_item_id(d.get("url", ""))]
 
     while len(song_titles) < len(video_urls):
         song_titles.append(None)
@@ -344,7 +368,8 @@ def download():
         args=(job_id, video_urls, song_titles, d.get("format","mp4"), d.get("quality")),
         kwargs=dict(custom_name=d.get("custom_name") or None,
                     serialize=bool(d.get("serialize")),
-                    save_to=save_to)
+                    save_to=save_to,
+                    entry_ids=entry_ids or None)
     ).start()
     return jsonify(id=job_id)
 

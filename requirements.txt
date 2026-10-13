@@ -1,9 +1,9 @@
-# YT Grab — Python dependencies
+# Grabio — Python dependencies
 # Install: uv pip install -r requirements.txt
 #      or: pip install -r requirements.txt
 
 # ── Core app ────────────────────────────────────────────────────────────────
-flask>=3.0               # web framework
-yt-dlp                   # YouTube downloader (keep unpinned — update often)
-imageio-ffmpeg           # bundled static ffmpeg binary (no Homebrew needed)
-waitress>=3.0            # production WSGI server (macOS / Linux / Windows)
+flask>=3.0               # Web framework
+yt-dlp                   # Video & audio extraction engine (keep unpinned — update often)
+imageio-ffmpeg           # Bundled static ffmpeg binary (no system install needed)
+waitress>=3.0            # Production WSGI server (macOS / Linux / Windows)

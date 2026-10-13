@@ -16,7 +16,8 @@
     --bg:#f6f5fb; --surface:#ffffff; --soft:#efedfb; --thumb:#ffffff;
     --ink:#14122b; --muted:#6b6885; --line:#e6e3f3;
     --accent:#4a3aff; --accent-fill:#2a1fd1; --on-accent:#ffffff;
-    --ring:rgba(74,58,255,.18); --err:#c92a3e;
+    --ring:rgba(74,58,255,.18); --err:#c92a3e; --warn:#a05c00; --warn-bg:#fff7e6;
+    --ok:#166534; --ok-bg:#f0fdf4;
     --blob1:rgba(255,170,200,.50); --blob2:rgba(130,120,255,.30);
     --shadow:0 1px 2px rgba(20,18,43,.04),0 20px 50px -20px rgba(74,58,255,.25);
     --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
@@ -26,7 +27,8 @@
     --bg:#0d0c1d; --surface:#16152b; --soft:#201f3d; --thumb:#34326a;
     --ink:#ecebff; --muted:#9a98bd; --line:#292747;
     --accent:#6a60ff; --accent-fill:#4b41e8; --on-accent:#ffffff;
-    --ring:rgba(106,96,255,.30); --err:#ff7b8c;
+    --ring:rgba(106,96,255,.30); --err:#ff7b8c; --warn:#fbbf24; --warn-bg:#2a200a;
+    --ok:#4ade80; --ok-bg:#052e16;
     --blob1:rgba(255,90,150,.14); --blob2:rgba(106,96,255,.26);
     --shadow:0 1px 2px rgba(0,0,0,.3),0 24px 60px -24px rgba(0,0,0,.7);
   }
@@ -42,6 +44,18 @@
     background-attachment:fixed;
   }
   .wrap{max-width:680px;margin:0 auto;padding:28px 20px 56px}
+
+  /* ── yt-dlp update banner ───────────────────────────────────────────── */
+  #update-banner{display:none;align-items:center;gap:10px;padding:10px 16px;margin-bottom:18px;
+    background:var(--warn-bg);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);
+    border-radius:14px;font-size:.875rem;color:var(--warn)}
+  #update-banner.show{display:flex}
+  #update-banner strong{flex:1}
+  #update-btn{border:1px solid var(--warn);background:transparent;color:var(--warn);
+    border-radius:999px;padding:5px 14px;font:600 .8rem var(--body);cursor:pointer;
+    white-space:nowrap;transition:background .15s}
+  #update-btn:hover{background:color-mix(in srgb,var(--warn) 12%,transparent)}
+  #update-btn:disabled{opacity:.5;cursor:not-allowed}
 
   header{display:flex;justify-content:space-between;align-items:center;margin-bottom:clamp(40px,9vh,84px)}
   .brand{display:flex;align-items:center;gap:10px;font:700 1.05rem var(--display);letter-spacing:-.01em}
@@ -71,11 +85,14 @@
   .btn:hover:not(:disabled){filter:brightness(1.08)}
   .btn:active:not(:disabled){transform:translateY(1px)}
   .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.ghost{background:transparent;color:var(--err);border:1px solid var(--err)}
+  .btn.ghost:hover:not(:disabled){background:color-mix(in srgb,var(--err) 8%,transparent)}
   :focus-visible{outline:3px solid var(--accent);outline-offset:3px}
   .finder input:focus-visible{outline:none}
 
   .note{min-height:1.4em;margin:12px 6px 0;color:var(--muted);font-size:.925rem}
   .note.err{color:var(--err)}
+  .note.ok{color:var(--ok)}
 
   #result{display:none;margin-top:18px;padding:24px;background:var(--surface);
           border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow)}
@@ -112,6 +129,7 @@
   .sico.done{color:#22c55e}
   .sico.failed{color:var(--err)}
   .sico.downloading{color:var(--accent)}
+  .sico.cancelled{color:var(--muted)}
   @keyframes spin{to{transform:rotate(360deg)}}
   .sico.downloading svg{animation:spin .9s linear infinite}
   /* filter */
@@ -136,6 +154,23 @@
         font:500 .95rem var(--body);outline:none;padding:8px 0}
   .fname-wrap input::placeholder{color:var(--muted);opacity:.7}
   .fname-ext{color:var(--muted);font:500 .9rem var(--body);white-space:nowrap;padding-right:14px;user-select:none}
+
+  /* ── save-to-folder row ─────────────────────────────────────────────── */
+  .save-row{margin-top:14px;padding:14px 16px;background:var(--soft);border:1px solid var(--line);border-radius:18px}
+  .save-row-head{display:flex;align-items:center;gap:14px}
+  .save-icon{width:36px;height:36px;border-radius:10px;background:var(--surface);
+        border:1px solid var(--line);display:grid;place-items:center;flex:none;color:var(--accent)}
+  .save-icon svg{width:16px;height:16px}
+  .save-row .slabel{flex:1;min-width:0}
+  .save-row .slabel strong{display:block;font:600 .9rem var(--body);color:var(--ink)}
+  .save-row .slabel small{display:block;font-weight:400;color:var(--muted);font-size:.8rem;margin-top:1px}
+  .save-path-wrap{display:none;margin-top:10px}
+  .save-path-wrap.open{display:flex;align-items:center;background:var(--surface);border:1px solid var(--line);
+        border-radius:999px;padding:4px 4px 4px 14px;gap:6px;transition:border-color .2s,box-shadow .2s}
+  .save-path-wrap.open:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+  .save-path-wrap input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);
+        font:500 .9rem var(--body);outline:none;padding:7px 0}
+  .save-path-wrap input::placeholder{color:var(--muted);opacity:.7}
 
   /* serialize toggle */
   .serialize-row{display:none;align-items:center;gap:14px;
@@ -174,9 +209,13 @@
         background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%238b88a8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
         background-repeat:no-repeat;background-position:right 16px center}
 
-  .go{position:relative;overflow:hidden;width:100%;margin-top:26px;padding:17px 24px;font-size:1.05rem}
+  /* ── action row: download + cancel ─────────────────────────────────── */
+  .action-row{display:flex;gap:10px;margin-top:26px;align-items:stretch}
+  .go{position:relative;overflow:hidden;flex:1;padding:17px 24px;font-size:1.05rem;margin-top:0}
   .go .fill{position:absolute;inset:0;width:0;background:var(--accent-fill);transition:width .45s ease}
   .go span.lbl{position:relative}
+  #cancel{display:none;padding:17px 22px;font-size:.975rem}
+  #cancel.show{display:block}
 
   footer{margin-top:44px;color:var(--muted);font-size:.85rem;text-align:center;max-width:52ch;margin-inline:auto}
 
@@ -190,7 +229,8 @@
     .seg{grid-template-columns:repeat(3,1fr)}
     .seg label{padding:9px 6px}
     select{width:100%}
-    .fname-wrap{border-radius:18px}
+    .fname-wrap,.save-path-wrap.open{border-radius:18px}
+    .action-row{flex-direction:column}
   }
   @media (prefers-reduced-motion:reduce){
     *{animation:none!important;transition:none!important}
@@ -199,6 +239,12 @@
 </head>
 <body>
 <div class="wrap">
+  <!-- yt-dlp update banner -->
+  <div id="update-banner" role="alert">
+    <strong id="update-text"></strong>
+    <button id="update-btn" type="button">Update now</button>
+  </div>
+
   <header>
     <div class="brand">
       <span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5v8M4.5 7.5L8 11l3.5-3.5M3 13.5h10"/></svg></span>
@@ -266,6 +312,30 @@
         </div>
       </div>
 
+      <!-- Save to folder -->
+      <div class="save-row" id="save-row">
+        <div class="save-row-head">
+          <span class="save-icon" aria-hidden="true">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 4a1 1 0 0 1 1-1h3l1.5 2H13a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4z"/>
+            </svg>
+          </span>
+          <span class="slabel">
+            <strong>Save directly to a folder</strong>
+            <small>Skip the browser download — write files straight to a path on your Mac</small>
+          </span>
+          <label class="toggle" aria-label="Toggle save to folder">
+            <input type="checkbox" id="save-toggle">
+            <span class="toggle-track"></span>
+            <span class="toggle-knob"></span>
+          </label>
+        </div>
+        <div class="save-path-wrap" id="save-path-wrap">
+          <input id="save-path" type="text" placeholder="e.g. /Users/you/Music/Downloads" autocomplete="off" spellcheck="false">
+        </div>
+      </div>
+
+      <!-- Serialize toggle (playlists only) -->
       <div class="serialize-row" id="serialize-row">
         <span class="serialize-icon" aria-hidden="true">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
@@ -284,7 +354,11 @@
         </label>
       </div>
 
-      <button id="go" class="btn go" type="button"><i class="fill" id="fill"></i><span class="lbl" id="golabel">Download</span></button>
+      <!-- Action row -->
+      <div class="action-row">
+        <button id="go" class="btn go" type="button"><i class="fill" id="fill"></i><span class="lbl" id="golabel">Download</span></button>
+        <button id="cancel" class="btn ghost" type="button">Cancel</button>
+      </div>
       <div id="msg" class="note" role="status" style="text-align:center"></div>
     </section>
   </main>
@@ -295,7 +369,7 @@
 <script>
 const $ = id => document.getElementById(id);
 
-/* theme */
+/* ── theme ────────────────────────────────────────────────────────────── */
 function paintTheme(){ $('theme').setAttribute('aria-label', document.documentElement.dataset.theme==='dark' ? 'Switch to light theme' : 'Switch to dark theme'); }
 $('theme').onclick=()=>{
   const t = document.documentElement.dataset.theme==='dark' ? 'light' : 'dark';
@@ -305,7 +379,35 @@ $('theme').onclick=()=>{
 };
 paintTheme();
 
-/* drag-and-drop */
+/* ── yt-dlp version check ─────────────────────────────────────────────── */
+(async()=>{
+  try{
+    const d = await (await fetch('/api/ytdlp-version')).json();
+    if(d.outdated){
+      $('update-text').textContent = `yt-dlp update available: ${d.installed} → ${d.latest}`;
+      $('update-banner').classList.add('show');
+    }
+  }catch(e){}
+})();
+$('update-btn').onclick = async()=>{
+  const btn = $('update-btn');
+  btn.disabled = true; btn.textContent = 'Updating…';
+  try{
+    const d = await (await fetch('/api/ytdlp-update',{method:'POST'})).json();
+    if(d.ok){
+      $('update-text').textContent = `yt-dlp updated ✓ (${d.version})`;
+      btn.textContent = 'Done';
+    } else {
+      $('update-text').textContent = `Update failed: ${d.error||'unknown error'}`;
+      btn.textContent = 'Retry';
+      btn.disabled = false;
+    }
+  }catch(e){
+    btn.textContent = 'Retry'; btn.disabled = false;
+  }
+};
+
+/* ── drag-and-drop ────────────────────────────────────────────────────── */
 document.addEventListener('dragover', e=>{ e.preventDefault(); document.body.classList.add('drag-over'); });
 document.addEventListener('dragleave', e=>{ if(!e.relatedTarget) document.body.classList.remove('drag-over'); });
 document.addEventListener('drop', e=>{
@@ -316,7 +418,7 @@ document.addEventListener('drop', e=>{
   }
 });
 
-/* clipboard auto-detect on focus */
+/* ── clipboard auto-detect on focus ──────────────────────────────────── */
 document.addEventListener('visibilitychange', async()=>{
   if(document.visibilityState!=='visible') return;
   try{
@@ -324,10 +426,10 @@ document.addEventListener('visibilitychange', async()=>{
     if((t.includes('youtube.com')||t.includes('youtu.be')) && t.trim()!==$('url').value.trim()){
       $('url').value=t.trim(); say('cmsg','YouTube link detected from clipboard — press Check link',false);
     }
-  }catch(e){/* clipboard permission denied, ignore */}
+  }catch(e){}
 });
 
-/* format + quality */
+/* ── format + quality ─────────────────────────────────────────────────── */
 const Q = {
   mp4:[["2160","Up to 4K"],["1440","Up to 1440p"],["1080","Up to 1080p"],["720","Up to 720p"],["480","Up to 480p"],["360","Up to 360p"]],
   mp3:[["320","320 kbps"],["192","192 kbps"],["128","128 kbps"]],
@@ -347,7 +449,6 @@ document.querySelectorAll('input[name=fmt]').forEach(r=>r.onchange=()=>{fillQ();
 window.addEventListener('resize',moveThumb);
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(moveThumb);
 const EXT={mp4:'.mp4',mp3:'.mp3',m4a:'.m4a'};
-/* bitrate kbps estimates per format/quality for size hint */
 const KBPS={
   mp4:{'2160':25000,'1440':10000,'1080':5000,'720':2500,'480':1000,'360':500},
   mp3:{'320':320,'192':192,'128':128},
@@ -365,8 +466,7 @@ function updateSizeHint(){
   const kbps=(KBPS[fmt]||{})[q];
   const hint=$('size-hint'); if(!hint) return;
   if(!kbps||!totalDuration){ hint.textContent=''; return; }
-  const bytes=kbps*1000/8*totalDuration;
-  hint.textContent='~'+fmtSize(bytes);
+  hint.textContent='~'+fmtSize(kbps*1000/8*totalDuration);
 }
 function updateExt(){
   const f=document.querySelector('input[name=fmt]:checked').value;
@@ -375,9 +475,19 @@ function updateExt(){
 $('q').addEventListener('change', updateSizeHint);
 fillQ(); updateExt(); updateSizeHint();
 
-/* helpers */
-function say(id,t,err){ const n=$(id); n.textContent=t; n.className='note'+(err?' err':''); }
-let isPlaylist=false, busy=false, plTitle='';
+/* ── save-to-folder toggle ────────────────────────────────────────────── */
+$('save-toggle').onchange=()=>{
+  const on = $('save-toggle').checked;
+  $('save-path-wrap').classList.toggle('open', on);
+  if(on) $('save-path').focus();
+};
+
+/* ── helpers ──────────────────────────────────────────────────────────── */
+function say(id,t,err,ok){
+  const n=$(id); n.textContent=t;
+  n.className='note'+(err?' err':ok?' ok':'');
+}
+let isPlaylist=false, busy=false, plTitle='', currentJobId=null;
 const fmtDur=s=>{ if(!s) return ''; s=Math.round(s); const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;
   return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0'); };
 const boxes=()=>[...document.querySelectorAll('#list li:not([hidden]) input')];
@@ -393,7 +503,7 @@ $('selall').onclick=()=>{ boxes().forEach(b=>b.checked=true); refresh(); };
 $('selnone').onclick=()=>{ boxes().forEach(b=>b.checked=false); refresh(); };
 $('list').addEventListener('change',refresh);
 
-/* filter */
+/* ── filter ───────────────────────────────────────────────────────────── */
 $('filter').addEventListener('input',()=>{
   const q=$('filter').value.toLowerCase();
   document.querySelectorAll('#list li').forEach(li=>{
@@ -402,7 +512,7 @@ $('filter').addEventListener('input',()=>{
   refresh();
 });
 
-/* shift-click range selection */
+/* ── shift-click range selection ─────────────────────────────────────── */
 let lastChecked=null;
 $('list').addEventListener('click', e=>{
   const cb=e.target.closest('input[type=checkbox]'); if(!cb) return;
@@ -415,7 +525,7 @@ $('list').addEventListener('click', e=>{
   lastChecked=cb; refresh();
 });
 
-/* check link */
+/* ── check link ───────────────────────────────────────────────────────── */
 $('check').onclick=async()=>{
   const url=$('url').value.trim();
   $('check').disabled=true; say('cmsg','Checking link…');
@@ -426,17 +536,14 @@ $('check').onclick=async()=>{
     $('meta').textContent=(d.channel?d.channel+' · ':'')+(d.is_playlist?d.count+' videos':'Single video');
     if(d.thumbnail) $('thumb').src=d.thumbnail; else $('thumb').removeAttribute('src');
     isPlaylist=d.is_playlist; plTitle=d.title||'playlist';
-    // Track total duration for size estimate
     totalDuration = d.is_playlist
       ? (d.entries||[]).reduce((s,e)=>s+(e.duration||0),0)
       : (d.duration||0);
     updateSizeHint();
-    // Pre-fill filename from title (strip chars invalid in filenames)
     $('fname').value=(d.title||'download').replace(/[\\/:*?"<>|]+/g,'_').trim().slice(0,120);
-    // Show serialize toggle only for playlists
     $('serialize-row').classList.toggle('pl-only', d.is_playlist);
     if(!d.is_playlist) $('serialize').checked=false;
-    $('filter').value=''; // reset filter
+    $('filter').value='';
     $('songs').style.display=d.is_playlist?'block':'none';
     $('list').innerHTML=(d.entries||[]).map(e=>
       `<li data-id="${esc(e.id)}"><label><input type="checkbox" value="${esc(e.id)}" checked><span class="t" title="${esc(e.title)}">${esc(e.title)}</span><span class="d">${fmtDur(e.duration)}</span><span class="sico" id="si-${esc(e.id)}"></span></label></li>`).join('');
@@ -448,29 +555,51 @@ $('check').onclick=async()=>{
   $('check').disabled=false;
 };
 
-/* download */
+/* ── cancel ───────────────────────────────────────────────────────────── */
+$('cancel').onclick=async()=>{
+  if(!currentJobId) return;
+  $('cancel').disabled=true;
+  try{ await fetch('/api/cancel/'+currentJobId,{method:'POST'}); }catch(e){}
+};
+
+/* ── download ─────────────────────────────────────────────────────────── */
 $('go').onclick=async()=>{
-  busy=true; $('golabel').textContent='Starting…'; refresh(); $('fill').style.width='0'; say('msg','');
+  busy=true; $('golabel').textContent='Starting…'; refresh();
+  $('fill').style.width='0'; say('msg','');
+  $('cancel').classList.add('show'); $('cancel').disabled=false;
+
   const selectedBoxes = boxes().filter(b=>b.checked);
-  const selectedIds = selectedBoxes.map(b=>b.value);
-  const selectedTitles = selectedBoxes.map(b=>b.closest('li').querySelector('.t').textContent);
+  const selectedIds   = selectedBoxes.map(b=>b.value);
+  const selectedTitles= selectedBoxes.map(b=>b.closest('li').querySelector('.t').textContent);
   const fmt=document.querySelector('input[name=fmt]:checked').value;
   const customName=($('fname').value||'').trim().replace(/[\\/:*?"<>|]+/g,'_').slice(0,120)||'download';
+  const saveToggle=$('save-toggle').checked;
+  const saveTo=saveToggle ? ($('save-path').value||'').trim() : '';
+
   const body={url:$('url').value.trim(),format:fmt,
               quality:$('q').value,title:plTitle,
               custom_name:customName,
               serialize: isPlaylist && $('serialize').checked,
               ids:isPlaylist?selectedIds:null,
-              titles:isPlaylist?selectedTitles:null};
-  const finish=()=>{ busy=false; $('fill').style.width='0'; refresh(); };
+              titles:isPlaylist?selectedTitles:null,
+              save_to: saveTo||null};
+
+  const finish=()=>{
+    busy=false; $('fill').style.width='0';
+    $('cancel').classList.remove('show'); $('cancel').disabled=false;
+    currentJobId=null; refresh();
+  };
+
   try{
     const r=await fetch('/api/download',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const {id}=await r.json();
+    currentJobId=id;
     const t=setInterval(async()=>{
       const s=await (await fetch('/api/status/'+id)).json();
       const p=Math.round(s.progress||0);
       $('fill').style.width=p+'%'; $('golabel').textContent=`Downloading ${p}%`; say('msg',s.message||'');
-      // Update per-song status icons
+
+      /* per-song status icons */
       if(s.songs){
         Object.entries(s.songs).forEach(([vid,info])=>{
           const el=document.getElementById('si-'+vid); if(!el) return;
@@ -483,28 +612,40 @@ $('go').onclick=async()=>{
           } else if(info.status==='failed'){
             el.className='sico failed';
             el.innerHTML=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
+          } else if(info.status==='cancelled'){
+            el.className='sico cancelled'; el.innerHTML='–';
           }
         });
       }
+
       if(s.status==='done'){
         clearInterval(t); $('golabel').textContent='Saved'; say('msg',s.name);
-        // Show retry button if any songs failed
         const failed=s.songs?Object.entries(s.songs).filter(([,v])=>v.status==='failed'):[];
         if(failed.length>0){
           const rb=document.createElement('button');
           rb.className='chip'; rb.style.marginTop='10px';
           rb.textContent=`Retry ${failed.length} failed song${failed.length>1?'s':''}`;
           rb.onclick=()=>{
-            // Re-check failed ones in the list
-            allBoxes().forEach(b=>{
-              const vid=b.value;
-              b.checked = failed.some(([fid])=>fid===vid);
-            });
+            allBoxes().forEach(b=>{ b.checked = failed.some(([fid])=>fid===b.value); });
             rb.remove(); refresh(); $('go').click();
           };
           $('msg').after(rb);
         }
         location.href='/api/file/'+id; setTimeout(finish,2500);
+      }
+
+      if(s.status==='saved'){
+        clearInterval(t);
+        $('golabel').textContent='Saved ✓';
+        const where=s.save_to||'';
+        const count=s.saved_files?s.saved_files.length:0;
+        say('msg',`${count} file${count!==1?'s':''} saved to ${where}`,false,true);
+        $('fill').style.width='100%';
+        setTimeout(finish,3000);
+      }
+
+      if(s.status==='cancelled'){
+        clearInterval(t); say('msg','Download cancelled.',true); finish();
       }
       if(s.status==='error'){ clearInterval(t); say('msg',s.message,true); finish(); }
     },800);

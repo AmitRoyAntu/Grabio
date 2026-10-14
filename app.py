@@ -387,7 +387,7 @@ def run_job(job_id, urls, titles, fmt, quality,
             if job.get("_bot_blocked"):
                 raise RuntimeError(
                     "YouTube blocked this server's IP (HTTP 429 / bot detection). "
-                    "To fix this, set PROXY_URL (recommended) or COOKIES_B64 on Render. "
+                    "To fix this, set the PROXY_URL environment variable on Render. "
                     "See the README for instructions."
                 )
             raise RuntimeError("Nothing was downloaded. The video may be private, region-locked, or unavailable.")
@@ -545,7 +545,7 @@ def info():
         if "429" in err_text or "sign in" in err_text or "bot" in err_text or "confirm" in err_text:
             return jsonify(error=(
                 "⚠️ YouTube is blocking this server's IP (bot detection / HTTP 429). "
-                "Set PROXY_URL (recommended) or COOKIES_B64 on Render to fix this. "
+                "Set the PROXY_URL environment variable on Render to fix this. "
                 "See the README for step-by-step instructions."
             )), 403
         return jsonify(error=f"Couldn't read that link: {str(e)[:200]}"), 400

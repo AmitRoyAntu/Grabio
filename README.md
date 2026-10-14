@@ -123,11 +123,11 @@ Grabio is deployable to any cloud platform that supports Docker. The live instan
 
 ---
 
-## 🛡️ Fixing YouTube Bot-Detection on Cloud (HTTP 429)
+## 🛡️ Cloud Deployment & YouTube Bot-Detection (HTTP 429)
 
-YouTube blocks requests from cloud/datacenter IPs (Render, Railway, AWS, etc.) by default. You have two ways to solve this:
+YouTube blocks requests from cloud/datacenter IPs (Render, Railway, AWS, etc.) by default. 
 
-### Method 1: Use a Free Proxy via `PROXY_URL` (Recommended — Permanent & Zero Maintenance)
+### Fix: Use a Free Proxy via `PROXY_URL` (Permanent & Zero Maintenance)
 
 Routing yt-dlp traffic through a proxy bypasses YouTube's datacenter IP block without needing any Google account or cookies.
 
@@ -143,44 +143,11 @@ Routing yt-dlp traffic through a proxy bypasses YouTube's datacenter IP block wi
 [grabio] Proxy enabled → http://***:***@p.webshare.io:80
 ```
 
----
-
-### Method 2: Set up `COOKIES_B64` on Render
-
-If you prefer using your YouTube account cookies:
-
-**Step 1 — Export your YouTube cookies**
-1. In Chrome, install **[Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)**
-2. Go to **[youtube.com](https://youtube.com)** while **logged in**
-3. Click the extension → **Export** → **youtube.com** → save as `cookies.txt`
-
-**Step 2 — Encode the file**
-```bash
-# macOS / Linux — copies encoded value to clipboard
-base64 -i ~/Downloads/cookies.txt | tr -d '\n' | pbcopy
-```
-
-**Step 3 — Add to Render**
-1. Render Dashboard → your Grabio service → **Environment**
-2. Add environment variable:
-   - **Key:** `COOKIES_B64`
-   - **Value:** paste from clipboard
-3. Click **Save Changes** — Render auto-redeploys
-
-**Confirmation:** You'll see this line in Render logs once cookies are loaded:
-```text
-[grabio] Loaded cookies from COOKIES_B64 → /tmp/xxx_cookies.txt
-```
-
-> **Note:** YouTube cookies expire after ~1–2 weeks. When downloads start failing again, export fresh cookies and update the `COOKIES_B64` value on Render.
-
-### Environment Variables Reference
+### Environment Variables
 
 | Variable | Description |
 |---|---|
-| `PROXY_URL` | **(Recommended)** HTTP/SOCKS5 proxy URL to bypass cloud datacenter IP blocks |
-| `COOKIES_B64` | Base64-encoded `cookies.txt` — alternative fix for YouTube bot-detection |
-| `COOKIES_FILE` | Path to a local `cookies.txt` file (for self-hosted/VPS) |
+| `PROXY_URL` | HTTP/SOCKS5 proxy URL to bypass cloud datacenter IP blocks |
 | `PORT` | Port to bind (auto-set by Render/Railway, defaults to `5000`) |
 
 ---

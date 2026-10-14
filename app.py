@@ -207,7 +207,8 @@ def opts_for(fmt, quality, outtmpl, hook):
         "progress_hooks": [hook],
         "quiet": True,
         "noprogress": True,
-        "ignoreerrors": True,
+        # NOTE: ignoreerrors intentionally omitted — we catch exceptions
+        # in download_one() so we can surface the real error message.
         "writethumbnail": True,   # needed by EmbedThumbnail
     }
     base.update(COMMON_YTDL_OPTS)
@@ -312,10 +313,42 @@ def run_job(job_id, urls, titles, fmt, quality,
             before = set(f for f in os.listdir(folder)
                          if not f.endswith((".part", ".ytdl", ".webp", ".jpg", ".png", ".zip")))
 
+        last_error: list[str] = []
+
+        def error_hook(d):
+            if d.get("status") == "error":
+                last_error.append(d.get("error", ""))
+
         o = opts_for(fmt, quality, os.path.join(folder, "%(title)s.%(ext)s"), hook)
         o["noplaylist"] = True
-        with yt_dlp.YoutubeDL(o) as ydl:
-            ydl.download([url])
+        # Attach a second hook to capture error details
+        o["progress_hooks"].append(error_hook)
+        try:
+            with yt_dlp.YoutubeDL(o) as ydl:
+                ydl.download([url])
+        except yt_dlp.utils.DownloadError as exc:
+            err_text = str(exc).lower()
+            if "cancelled" in err_text:
+                songs[vid]["status"] = "cancelled"
+                return vid, False
+            if "429" in err_text or "sign in" in err_text or "bot" in err_text:
+                songs[vid]["status"] = "failed"
+                songs[vid]["error"] = "bot_block"
+                job["_bot_blocked"] = True
+            else:
+                songs[vid]["status"] = "failed"
+                songs[vid]["error"] = str(exc)[:200]
+            with lock:
+                done_count[0] += 1
+                job["progress"] = round(done_count[0] / n * 100, 1)
+            return vid, False
+        except Exception as exc:
+            songs[vid]["status"] = "failed"
+            songs[vid]["error"] = str(exc)[:200]
+            with lock:
+                done_count[0] += 1
+                job["progress"] = round(done_count[0] / n * 100, 1)
+            return vid, False
 
         with folder_lock:
             after = set(f for f in os.listdir(folder)
@@ -350,7 +383,13 @@ def run_job(job_id, urls, titles, fmt, quality,
         files = [f for f in os.listdir(folder)
                  if not f.endswith((".part", ".ytdl", ".webp", ".jpg", ".png", ".zip"))]
         if not files:
-            raise RuntimeError("Nothing was downloaded. The video may be private or unavailable.")
+            if job.get("_bot_blocked"):
+                raise RuntimeError(
+                    "YouTube blocked this server's IP (HTTP 429 / bot detection). "
+                    "To fix this, set up the COOKIES_B64 environment variable on Render with your YouTube cookies. "
+                    "See the README for instructions."
+                )
+            raise RuntimeError("Nothing was downloaded. The video may be private, region-locked, or unavailable.")
 
         # ── Save-to-folder mode ─────────────────────────────────────────────
         if save_to:

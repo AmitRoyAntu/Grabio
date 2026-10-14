@@ -2,7 +2,7 @@
 Run:  python app.py   then open http://127.0.0.1:5000
 ffmpeg is bundled via imageio-ffmpeg or system PATH.
 """
-import os, re, shutil, subprocess, sys, tempfile, threading, time, urllib.parse, uuid, zipfile
+import base64, os, re, shutil, subprocess, sys, tempfile, threading, time, urllib.parse, uuid, zipfile, atexit
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, jsonify, request, send_file, send_from_directory
 import yt_dlp
@@ -144,14 +144,49 @@ def clean_and_validate_url(raw_url: str) -> tuple[str | None, str | None]:
     return url, None
 
 
-COOKIES_FILE = os.environ.get("COOKIES_FILE") or (
+# Support COOKIES_B64: base64-encoded cookies.txt — useful for cloud deployments (Render, Railway)
+# where you can't upload files but CAN set environment variables.
+_COOKIES_TMP: str | None = None
+_cookies_b64 = os.environ.get("COOKIES_B64", "").strip()
+if _cookies_b64:
+    try:
+        _decoded = base64.b64decode(_cookies_b64)
+        _tmp = tempfile.NamedTemporaryFile(delete=False, suffix="_cookies.txt", mode="wb")
+        _tmp.write(_decoded)
+        _tmp.close()
+        _COOKIES_TMP = _tmp.name
+        atexit.register(lambda: os.unlink(_COOKIES_TMP) if _COOKIES_TMP and os.path.exists(_COOKIES_TMP) else None)
+        print(f"[grabio] Loaded cookies from COOKIES_B64 → {_COOKIES_TMP}", flush=True)
+    except Exception as e:
+        print(f"[grabio] WARNING: Failed to decode COOKIES_B64: {e}", flush=True)
+
+COOKIES_FILE = _COOKIES_TMP or os.environ.get("COOKIES_FILE") or (
     "cookies.txt" if os.path.isfile("cookies.txt") else None
 )
 PROXY_URL = os.environ.get("PROXY_URL")
-COMMON_YTDL_OPTS = {
-    "extractor_args": {"youtube": {"player_client": ["web", "android"]}},
+
+# YouTube's "web" player client is blocked by Render/AWS datacenter IPs.
+# "ios" and "android" clients bypass this check since they use mobile APIs.
+# "web" is kept as a final fallback.
+COMMON_YTDL_OPTS: dict = {
+    "extractor_args": {
+        "youtube": {
+            "player_client": ["ios", "android", "web"],
+            "skip": ["hls", "dash"],          # avoid manifest formats that often fail on cloud
+        }
+    },
+    "http_headers": {
+        "User-Agent": (
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
+            "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+        ),
+    },
     "js_runtimes": JS_RUNTIMES,
     "remote_components": ["ejs:github"],
+    "sleep_interval": 1,           # 1 s between requests — reduces rate-limit on shared IPs
+    "sleep_interval_requests": 1,
+    "retries": 5,
+    "fragment_retries": 5,
 }
 if COOKIES_FILE:
     COMMON_YTDL_OPTS["cookiefile"] = COOKIES_FILE

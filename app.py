@@ -431,17 +431,14 @@ def run_job(job_id, urls, titles, fmt, quality,
             zpath = os.path.join(folder, f"{zname}.zip")
             sorted_files = sorted(files)
             pad  = len(str(len(sorted_files)))
-            base = safe(custom_name) if custom_name else None
             with zipfile.ZipFile(zpath, "w", zipfile.ZIP_STORED) as z:
                 for idx, f in enumerate(sorted_files, start=1):
-                    ext      = os.path.splitext(f)[1]
-                    orig_stem= os.path.splitext(f)[0]
-                    if base and serialize:
-                        arc_name = f"{str(idx).zfill(pad)} {base}{ext}"
-                    elif base:
-                        arc_name = f"{base} - {orig_stem}{ext}"
+                    if serialize:
+                        ext       = os.path.splitext(f)[1]
+                        orig_stem = os.path.splitext(f)[0]
+                        arc_name  = f"{str(idx).zfill(pad)} {orig_stem}{ext}"
                     else:
-                        arc_name = f
+                        arc_name  = f
                     z.write(os.path.join(folder, f), arc_name)
             job["file"], job["name"] = zpath, f"{zname}.zip"
 

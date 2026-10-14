@@ -170,17 +170,6 @@ PROXY_URL = os.environ.get("PROXY_URL")
 # NOTE: Use a desktop UA for tab/playlist extraction — mobile UA gets a
 # different page layout that the youtube:tab extractor can't parse.
 COMMON_YTDL_OPTS: dict = {
-    "extractor_args": {
-        "youtube": {
-            "player_client": ["ios", "android", "web"],
-            "skip": ["hls", "dash"],
-        },
-        # Prevent the youtube:tab extractor from requesting the
-        # mobile variant of the playlist/channel page.
-        "youtubetab": {
-            "skip": ["webpage"],
-        },
-    },
     "http_headers": {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "

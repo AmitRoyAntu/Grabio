@@ -167,23 +167,30 @@ PROXY_URL = os.environ.get("PROXY_URL")
 
 # YouTube's "web" player client is blocked by Render/AWS datacenter IPs.
 # "ios" and "android" clients bypass this check since they use mobile APIs.
-# "web" is kept as a final fallback.
+# NOTE: Use a desktop UA for tab/playlist extraction — mobile UA gets a
+# different page layout that the youtube:tab extractor can't parse.
 COMMON_YTDL_OPTS: dict = {
     "extractor_args": {
         "youtube": {
             "player_client": ["ios", "android", "web"],
-            "skip": ["hls", "dash"],          # avoid manifest formats that often fail on cloud
-        }
+            "skip": ["hls", "dash"],
+        },
+        # Prevent the youtube:tab extractor from requesting the
+        # mobile variant of the playlist/channel page.
+        "youtubetab": {
+            "skip": ["webpage"],
+        },
     },
     "http_headers": {
         "User-Agent": (
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
-            "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/125.0.0.0 Safari/537.36"
         ),
     },
     "js_runtimes": JS_RUNTIMES,
     "remote_components": ["ejs:github"],
-    "sleep_interval": 1,           # 1 s between requests — reduces rate-limit on shared IPs
+    "sleep_interval": 1,
     "sleep_interval_requests": 1,
     "retries": 5,
     "fragment_retries": 5,
@@ -447,11 +454,19 @@ def info():
             "quiet": True,
             "extract_flat": "in_playlist",
             "skip_download": True,
-            "no_warnings": True,
         }
         ydl_opts.update(COMMON_YTDL_OPTS)
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             i = ydl.extract_info(url, download=False)
+        # If extract_flat returned nothing useful, retry without it
+        # (some playlist pages require a full fetch to be recognized)
+        if not i:
+            ydl_opts2 = {"quiet": True, "skip_download": True}
+            ydl_opts2.update(COMMON_YTDL_OPTS)
+            with yt_dlp.YoutubeDL(ydl_opts2) as ydl:
+                i = ydl.extract_info(url, download=False)
+        if not i:
+            return jsonify(error="Couldn't read that link. The video or playlist may be private, unavailable, or blocked in the server region."), 400
         entries = i.get("entries")
         items = None
         if entries is not None:

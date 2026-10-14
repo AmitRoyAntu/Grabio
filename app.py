@@ -29,7 +29,7 @@ def _apply_security_headers(response):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
     if request.path.startswith("/static/"):
-        response.headers["Cache-Control"] = "public, max-age=86400"
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
     return response
 
 

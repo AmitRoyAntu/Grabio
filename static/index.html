@@ -1904,10 +1904,14 @@
     const allBoxes = () => [...document.querySelectorAll('#list input')];
     function esc(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
     function refresh() {
-      const all = boxes(), n = all.filter(b => b.checked).length;
+      const all = boxes(), checked = all.filter(b => b.checked), n = checked.length;
       $('selcount').textContent = `${n} of ${allBoxes().length} selected`;
       if (!busy) $('golabel').textContent = isPlaylist ? `Download ${n} selected` : 'Download';
       $('go').disabled = busy || (isPlaylist && n === 0);
+      if (isPlaylist) {
+        totalDuration = checked.reduce((s, b) => s + (parseFloat(b.closest('li').dataset.duration) || 0), 0);
+        updateSizeHint();
+      }
     }
     $('selall').onclick = () => { boxes().forEach(b => b.checked = true); refresh(); };
     $('selnone').onclick = () => { boxes().forEach(b => b.checked = false); refresh(); };
@@ -1962,7 +1966,7 @@
         $('filter').value = '';
         $('songs').style.display = d.is_playlist ? 'block' : 'none';
         $('list').innerHTML = (d.entries || []).map(e =>
-          `<li data-id="${esc(e.id)}" data-url="${esc(e.webpage_url || '')}"><label><input type="checkbox" value="${esc(e.id)}" checked><span class="t" title="${esc(e.title)}">${esc(e.title)}</span><span class="d">${fmtDur(e.duration)}</span><span class="sico" id="si-${esc(e.id)}"></span></label></li>`).join('');
+          `<li data-id="${esc(e.id)}" data-url="${esc(e.webpage_url || '')}" data-duration="${e.duration || 0}"><label><input type="checkbox" value="${esc(e.id)}" checked><span class="t" title="${esc(e.title)}">${esc(e.title)}</span><span class="d">${fmtDur(e.duration)}</span><span class="sico" id="si-${esc(e.id)}"></span></label></li>`).join('');
         say('cmsg', ''); say('msg', '');
         $('fill').style.width = '0';
         const res = $('result'); res.classList.remove('show'); void res.offsetWidth; res.classList.add('show');

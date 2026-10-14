@@ -123,13 +123,31 @@ Grabio is deployable to any cloud platform that supports Docker. The live instan
 
 ---
 
-## 🍪 Fixing YouTube Bot-Detection on Cloud (HTTP 429)
+## 🛡️ Fixing YouTube Bot-Detection on Cloud (HTTP 429)
 
-YouTube blocks requests from cloud/datacenter IPs (Render, Railway, AWS, etc.) unless you authenticate with cookies.
+YouTube blocks requests from cloud/datacenter IPs (Render, Railway, AWS, etc.) by default. You have two ways to solve this:
 
-**Symptoms:** `YouTube blocked this server's IP (HTTP 429 / bot detection)`
+### Method 1: Use a Free Proxy via `PROXY_URL` (Recommended — Permanent & Zero Maintenance)
 
-### Fix: Set up `COOKIES_B64` on Render
+Routing yt-dlp traffic through a proxy bypasses YouTube's datacenter IP block without needing any Google account or cookies.
+
+1. Sign up for free at **[Webshare.io](https://www.webshare.io)** (10 free proxies forever, no credit card required).
+2. In your Webshare dashboard → **Proxy List**, copy your proxy credentials (or your rotating proxy endpoint).
+3. On **[dashboard.render.com](https://dashboard.render.com)** → your Grabio service → **Environment**, add:
+   - **Key:** `PROXY_URL`
+   - **Value:** `http://username:password@ip:port` (or `socks5://...`)
+4. Click **Save Changes** — Render will auto-redeploy.
+
+**Confirmation in Render logs:**
+```text
+[grabio] Proxy enabled → http://***:***@p.webshare.io:80
+```
+
+---
+
+### Method 2: Set up `COOKIES_B64` on Render
+
+If you prefer using your YouTube account cookies:
 
 **Step 1 — Export your YouTube cookies**
 1. In Chrome, install **[Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)**
@@ -150,19 +168,19 @@ base64 -i ~/Downloads/cookies.txt | tr -d '\n' | pbcopy
 3. Click **Save Changes** — Render auto-redeploys
 
 **Confirmation:** You'll see this line in Render logs once cookies are loaded:
-```
+```text
 [grabio] Loaded cookies from COOKIES_B64 → /tmp/xxx_cookies.txt
 ```
 
 > **Note:** YouTube cookies expire after ~1–2 weeks. When downloads start failing again, export fresh cookies and update the `COOKIES_B64` value on Render.
 
-### Optional Environment Variables
+### Environment Variables Reference
 
 | Variable | Description |
 |---|---|
-| `COOKIES_B64` | Base64-encoded `cookies.txt` — fixes YouTube 429 bot-detection on cloud IPs |
-| `COOKIES_FILE` | Path to a `cookies.txt` file (alternative to `COOKIES_B64` for self-hosted/VPS) |
-| `PROXY_URL` | HTTP/SOCKS5 proxy URL (e.g. `socks5://user:pass@host:port`) |
+| `PROXY_URL` | **(Recommended)** HTTP/SOCKS5 proxy URL to bypass cloud datacenter IP blocks |
+| `COOKIES_B64` | Base64-encoded `cookies.txt` — alternative fix for YouTube bot-detection |
+| `COOKIES_FILE` | Path to a local `cookies.txt` file (for self-hosted/VPS) |
 | `PORT` | Port to bind (auto-set by Render/Railway, defaults to `5000`) |
 
 ---

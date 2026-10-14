@@ -163,7 +163,19 @@ if _cookies_b64:
 COOKIES_FILE = _COOKIES_TMP or os.environ.get("COOKIES_FILE") or (
     "cookies.txt" if os.path.isfile("cookies.txt") else None
 )
-PROXY_URL = os.environ.get("PROXY_URL")
+PROXY_URL = os.environ.get("PROXY_URL", "").strip() or None
+if PROXY_URL:
+    COMMON_YTDL_OPTS["proxy"] = PROXY_URL
+    try:
+        parsed = urllib.parse.urlsplit(PROXY_URL)
+        netloc = parsed.netloc
+        if "@" in netloc:
+            _, host = netloc.split("@", 1)
+            netloc = f"***:***@{host}"
+        masked = urllib.parse.urlunsplit((parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment))
+        print(f"[grabio] Proxy enabled → {masked}", flush=True)
+    except Exception:
+        print("[grabio] Proxy enabled", flush=True)
 
 # YouTube's "web" player client is blocked by Render/AWS datacenter IPs.
 # "ios" and "android" clients bypass this check since they use mobile APIs.
@@ -375,7 +387,7 @@ def run_job(job_id, urls, titles, fmt, quality,
             if job.get("_bot_blocked"):
                 raise RuntimeError(
                     "YouTube blocked this server's IP (HTTP 429 / bot detection). "
-                    "To fix this, set up the COOKIES_B64 environment variable on Render with your YouTube cookies. "
+                    "To fix this, set PROXY_URL (recommended) or COOKIES_B64 on Render. "
                     "See the README for instructions."
                 )
             raise RuntimeError("Nothing was downloaded. The video may be private, region-locked, or unavailable.")
@@ -533,8 +545,8 @@ def info():
         if "429" in err_text or "sign in" in err_text or "bot" in err_text or "confirm" in err_text:
             return jsonify(error=(
                 "⚠️ YouTube is blocking this server's IP (bot detection / HTTP 429). "
-                "Set the COOKIES_B64 environment variable on Render with your exported YouTube cookies to fix this. "
-                "See the README → '🍪 Fixing YouTube Bot-Detection' for step-by-step instructions."
+                "Set PROXY_URL (recommended) or COOKIES_B64 on Render to fix this. "
+                "See the README for step-by-step instructions."
             )), 403
         return jsonify(error=f"Couldn't read that link: {str(e)[:200]}"), 400
 

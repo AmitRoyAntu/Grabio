@@ -2017,7 +2017,13 @@
 
       try {
         const r = await fetch('/api/download', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        const { id } = await r.json();
+        const data = await r.json();
+        if (!r.ok || data.error || !data.id) {
+          say('msg', data.error || 'Download failed to start.', true);
+          finish();
+          return;
+        }
+        const id = data.id;
         currentJobId = id;
         const t = setInterval(async () => {
           const s = await (await fetch('/api/status/' + id)).json();

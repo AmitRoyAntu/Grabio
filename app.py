@@ -175,10 +175,9 @@ COMMON_YTDL_OPTS: dict = {
     },
     "js_runtimes": JS_RUNTIMES,
     "remote_components": ["ejs:github"],
-    "sleep_interval": 1,
-    "sleep_interval_requests": 1,
     "retries": 5,
     "fragment_retries": 5,
+    "concurrent_fragment_downloads": 4,
 }
 if COOKIES_FILE:
     COMMON_YTDL_OPTS["cookiefile"] = COOKIES_FILE
@@ -241,7 +240,9 @@ def opts_for(fmt, quality, outtmpl, hook):
 PARALLEL_WORKERS = 3
 MAX_CONCURRENT_JOBS = int(os.environ.get("MAX_CONCURRENT_JOBS", 3))
 JOB_SEMAPHORE = threading.Semaphore(MAX_CONCURRENT_JOBS)
-MAX_PLAYLIST_ITEMS = int(os.environ.get("MAX_PLAYLIST_ITEMS", 25))
+IS_CLOUD = bool(os.environ.get("RENDER") or os.environ.get("RAILWAY_STATIC_URL") or os.environ.get("DYNO"))
+DEFAULT_MAX_ITEMS = 50 if IS_CLOUD else 500
+MAX_PLAYLIST_ITEMS = int(os.environ.get("MAX_PLAYLIST_ITEMS", DEFAULT_MAX_ITEMS))
 
 
 def _item_id(url: str, entry_id: str | None = None) -> str:
@@ -279,6 +280,7 @@ def run_job(job_id, urls, titles, fmt, quality,
             songs[vid] = {"status": "pending", "title": (titles[i] if titles else None) or vid}
 
         done_count = [0]
+        song_fracs = {}
         lock        = threading.Lock()
         folder_lock = threading.Lock()
 
@@ -296,10 +298,11 @@ def run_job(job_id, urls, titles, fmt, quality,
                 raise yt_dlp.utils.DownloadError("cancelled")
             if d["status"] == "downloading":
                 total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
-                frac  = (d["downloaded_bytes"] / total) if total else 0
+                frac  = (d["downloaded_bytes"] / total) if total else 0.0
                 with lock:
-                    pct = (done_count[0] + frac) / n * 100
-                    job["progress"] = round(pct, 1)
+                    song_fracs[vid] = min(1.0, max(0.0, frac))
+                    tot = done_count[0] + sum(song_fracs.values())
+                    job["progress"] = min(99.0, round(tot / n * 100, 1))
                 job["message"] = f"Downloading {os.path.basename(d.get('filename', ''))}"
             elif d["status"] == "finished":
                 job["message"] = "Processing…"
@@ -334,26 +337,32 @@ def run_job(job_id, urls, titles, fmt, quality,
                 songs[vid]["status"] = "failed"
                 songs[vid]["error"] = str(exc)[:200]
             with lock:
+                song_fracs.pop(vid, None)
                 done_count[0] += 1
-                job["progress"] = round(done_count[0] / n * 100, 1)
+                tot = done_count[0] + sum(song_fracs.values())
+                job["progress"] = min(99.0, round(tot / n * 100, 1))
             return vid, False
         except Exception as exc:
             songs[vid]["status"] = "failed"
             songs[vid]["error"] = str(exc)[:200]
             with lock:
+                song_fracs.pop(vid, None)
                 done_count[0] += 1
-                job["progress"] = round(done_count[0] / n * 100, 1)
+                tot = done_count[0] + sum(song_fracs.values())
+                job["progress"] = min(99.0, round(tot / n * 100, 1))
             return vid, False
 
         with folder_lock:
             after = set(f for f in os.listdir(folder)
-                        if not f.endswith((".part", ".ytdl", ".webp", ".jpg", ".png", ".zip")))
+                         if not f.endswith((".part", ".ytdl", ".webp", ".jpg", ".png", ".zip")))
 
         success = bool(after - before)
         songs[vid]["status"] = "done" if success else "failed"
         with lock:
+            song_fracs.pop(vid, None)
             done_count[0] += 1
-            job["progress"] = round(done_count[0] / n * 100, 1)
+            tot = done_count[0] + sum(song_fracs.values())
+            job["progress"] = min(99.0, round(tot / n * 100, 1))
         return vid, success
 
     try:

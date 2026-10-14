@@ -540,6 +540,13 @@ def info():
             filesize_approx=i.get("filesize_approx"),
         )
     except Exception as e:
+        err_text = str(e).lower()
+        if "429" in err_text or "sign in" in err_text or "bot" in err_text or "confirm" in err_text:
+            return jsonify(error=(
+                "⚠️ YouTube is blocking this server's IP (bot detection / HTTP 429). "
+                "Set the COOKIES_B64 environment variable on Render with your exported YouTube cookies to fix this. "
+                "See the README → '🍪 Fixing YouTube Bot-Detection' for step-by-step instructions."
+            )), 403
         return jsonify(error=f"Couldn't read that link: {str(e)[:200]}"), 400
 
 

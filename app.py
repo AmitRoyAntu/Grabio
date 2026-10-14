@@ -164,23 +164,7 @@ COOKIES_FILE = _COOKIES_TMP or os.environ.get("COOKIES_FILE") or (
     "cookies.txt" if os.path.isfile("cookies.txt") else None
 )
 PROXY_URL = os.environ.get("PROXY_URL", "").strip() or None
-if PROXY_URL:
-    COMMON_YTDL_OPTS["proxy"] = PROXY_URL
-    try:
-        parsed = urllib.parse.urlsplit(PROXY_URL)
-        netloc = parsed.netloc
-        if "@" in netloc:
-            _, host = netloc.split("@", 1)
-            netloc = f"***:***@{host}"
-        masked = urllib.parse.urlunsplit((parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment))
-        print(f"[grabio] Proxy enabled → {masked}", flush=True)
-    except Exception:
-        print("[grabio] Proxy enabled", flush=True)
 
-# YouTube's "web" player client is blocked by Render/AWS datacenter IPs.
-# "ios" and "android" clients bypass this check since they use mobile APIs.
-# NOTE: Use a desktop UA for tab/playlist extraction — mobile UA gets a
-# different page layout that the youtube:tab extractor can't parse.
 COMMON_YTDL_OPTS: dict = {
     "http_headers": {
         "User-Agent": (
@@ -200,6 +184,16 @@ if COOKIES_FILE:
     COMMON_YTDL_OPTS["cookiefile"] = COOKIES_FILE
 if PROXY_URL:
     COMMON_YTDL_OPTS["proxy"] = PROXY_URL
+    try:
+        parsed = urllib.parse.urlsplit(PROXY_URL)
+        netloc = parsed.netloc
+        if "@" in netloc:
+            _, host = netloc.split("@", 1)
+            netloc = f"***:***@{host}"
+        masked = urllib.parse.urlunsplit((parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment))
+        print(f"[grabio] Proxy enabled → {masked}", flush=True)
+    except Exception:
+        print("[grabio] Proxy enabled", flush=True)
 
 
 def opts_for(fmt, quality, outtmpl, hook):
